@@ -1,24 +1,36 @@
 /**
- * Extension to add root store access to models
+ * Extension for accessing the root store in MST models
  */
-import { IAnyStateTreeNode, IStateTreeNode, types } from "mobx-state-tree"
+import { IStateTreeNode } from "mobx-state-tree"
 import { RootStore } from "../root-store"
 
 /**
- * Adds a rootStore property to the model.
+ * Props for root store extension
  */
-export const withRootStore = types
-  .model("withRootStore")
-  .volatile(() => ({
-    rootStore: undefined as unknown as RootStore,
-  }))
-  .actions((self) => ({
+export interface WithRootStoreProps {
+  /**
+   * The root store.
+   */
+  rootStore: RootStore
+}
+
+/**
+ * Adds a rootStore property to the node for accessing other stores/models in the tree.
+ */
+export const withRootStore = (self: IStateTreeNode) => ({
+  views: {
     /**
-     * Set the rootStore to allow the model to access other stores and services
-     * 
-     * @param value The root store
+     * The root store.
      */
-    setRootStore(value: IStateTreeNode) {
-      self.rootStore = value as unknown as RootStore
-    },
-  }))
+    get rootStore() {
+      return getRootStore(self)
+    }
+  }
+})
+
+/**
+ * Gets the root store from the node's environment.
+ */
+export function getRootStore(self: any): RootStore {
+  return self.__getEnv ? self.__getEnv().rootStore : ({} as RootStore)
+}

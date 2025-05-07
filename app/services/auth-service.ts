@@ -1,148 +1,128 @@
 /**
- * Service to handle authentication with Google
+ * Authentication service
  */
-import * as Google from "expo-auth-session/providers/google"
-import { authApi, setAuthToken } from "./api"
-import { storage } from "./storage-service"
+import * as AuthSession from 'expo-auth-session'
+import { Platform } from 'react-native'
+import apiService from './api'
 
-const AUTH_TOKEN_KEY = "auth_token"
-const AUTH_REFRESH_TOKEN_KEY = "auth_refresh_token"
-const USER_PROFILE_KEY = "user_profile"
+// Google Auth configuration
+const GOOGLE_AUTH_CONFIG = {
+  clientId: Platform.select({
+    ios: 'YOUR_IOS_CLIENT_ID',
+    android: 'YOUR_ANDROID_CLIENT_ID',
+    web: 'YOUR_WEB_CLIENT_ID'
+  }),
+  scopes: ['profile', 'email'],
+  redirectUri: AuthSession.makeRedirectUri({
+    scheme: 'securevault',
+    useProxy: true
+  })
+}
 
 /**
- * Class to handle authentication-related functionality
+ * Login with Google OAuth
+ * @returns Promise with authentication result
  */
-export class AuthService {
-  /**
-   * Sign in with Google OAuth
-   */
-  async signInWithGoogle(): Promise<{
-    token: string
-    user: any
-  }> {
-    try {
-      // Use expo-auth-session to authenticate with Google
-      const [request, response, promptAsync] = Google.useAuthRequest({
-        expoClientId: "YOUR_EXPO_CLIENT_ID", // Replace with actual client ID from environment
-        iosClientId: "YOUR_IOS_CLIENT_ID", // Replace with actual client ID from environment
-        androidClientId: "YOUR_ANDROID_CLIENT_ID", // Replace with actual client ID from environment
-        webClientId: "YOUR_WEB_CLIENT_ID", // Replace with actual client ID from environment
+export const loginWithGoogle = async () => {
+  try {
+    const discovery = await AuthSession.fetchDiscoveryAsync('https://accounts.google.com')
+    
+    const request = new AuthSession.AuthRequest({
+      clientId: GOOGLE_AUTH_CONFIG.clientId!,
+      scopes: GOOGLE_AUTH_CONFIG.scopes,
+      redirectUri: GOOGLE_AUTH_CONFIG.redirectUri,
+      usePKCE: true,
+      responseType: AuthSession.ResponseType.Token
+    })
+    
+    const result = await request.promptAsync(discovery)
+    
+    if (result.type === 'success' && result.authentication?.accessToken) {
+      // Send token to backend for verification and session creation
+      const response = await apiService.createSession({
+        email: '',  // This will be extracted from the token on the backend
+        googleToken: result.authentication.accessToken
       })
-
-      if (response?.type === "success") {
-        const { id_token } = response.params
-        
-        // Exchange the Google ID token for our app's token
-        const authResponse = await authApi.googleAuth(id_token)
-        
-        // Save authentication data
-        await this.saveAuthData(authResponse.token, authResponse.user)
-        
-        // Set the auth token for API calls
-        setAuthToken(authResponse.token)
-        
-        return authResponse
-      } else {
-        throw new Error("Google authentication failed or was cancelled")
-      }
-    } catch (error) {
-      console.error("Google authentication error:", error)
-      throw error
+      
+      return response
     }
-  }
-
-  /**
-   * Sign out the current user
-   */
-  async signOut(): Promise<void> {
-    try {
-      // Clear auth token from API
-      setAuthToken(null)
-      
-      // Remove saved auth data
-      await storage.remove(AUTH_TOKEN_KEY)
-      await storage.remove(AUTH_REFRESH_TOKEN_KEY)
-      await storage.remove(USER_PROFILE_KEY)
-    } catch (error) {
-      console.error("Sign out error:", error)
-      throw error
+    
+    return {
+      success: false,
+      error: 'Google authentication failed'
     }
-  }
-
-  /**
-   * Check if user is authenticated
-   */
-  async isAuthenticated(): Promise<boolean> {
-    try {
-      const token = await storage.load(AUTH_TOKEN_KEY)
-      
-      if (!token) {
-        return false
-      }
-      
-      // Set token for API calls
-      setAuthToken(token)
-      
-      // Verify token validity with the server
-      const { valid } = await authApi.verifyToken()
-      return valid
-    } catch (error) {
-      console.error("Authentication check error:", error)
-      return false
-    }
-  }
-
-  /**
-   * Save authentication data to storage
-   */
-  private async saveAuthData(token: string, user: any): Promise<void> {
-    await storage.save(AUTH_TOKEN_KEY, token)
-    await storage.save(USER_PROFILE_KEY, JSON.stringify(user))
-  }
-
-  /**
-   * Get the stored user profile
-   */
-  async getUserProfile(): Promise<any | null> {
-    try {
-      const userProfileStr = await storage.load(USER_PROFILE_KEY)
-      
-      if (userProfileStr) {
-        return JSON.parse(userProfileStr)
-      }
-      
-      return null
-    } catch (error) {
-      console.error("Get user profile error:", error)
-      return null
-    }
-  }
-
-  /**
-   * Refresh the authentication token
-   */
-  async refreshToken(): Promise<string | null> {
-    try {
-      const refreshToken = await storage.load(AUTH_REFRESH_TOKEN_KEY)
-      
-      if (!refreshToken) {
-        return null
-      }
-      
-      const { token } = await authApi.refreshToken(refreshToken)
-      
-      if (token) {
-        await storage.save(AUTH_TOKEN_KEY, token)
-        setAuthToken(token)
-        return token
-      }
-      
-      return null
-    } catch (error) {
-      console.error("Token refresh error:", error)
-      return null
+  } catch (error) {
+    console.error('Error in Google authentication:', error)
+    return {
+      success: false,
+      error: 'Error during Google authentication'
     }
   }
 }
 
-export const authService = new AuthService()
+/**
+ * Login with email and password
+ * @param email User email
+ * @param password User password
+ * @returns Promise with authentication result
+ */
+export const loginWithEmailPassword = async (email: string, password: string) => {
+  if (!email || !password) {
+    return {
+      success: false,
+      error: 'Email and password are required'
+    }
+  }
+  
+  // Call API to create session
+  return await apiService.createSession({ email, password })
+}
+
+/**
+ * Logout current user
+ */
+export const logout = async () => {
+  // Clear session data
+  await apiService.clearSession()
+}
+
+/**
+ * Get current user profile
+ * @returns Promise with user profile data
+ */
+export const getCurrentUser = async () => {
+  return await apiService.getUserProfile()
+}
+
+/**
+ * Initialize authentication state
+ * Checks for existing session tokens and validates them
+ * @returns Promise with authentication result
+ */
+export const initializeAuth = async () => {
+  try {
+    // API service already loads session ID on startup
+    // Just check if it's valid by making a request
+    const userResponse = await apiService.getUserProfile()
+    
+    return {
+      success: userResponse.success,
+      data: userResponse.data,
+      error: userResponse.error
+    }
+  } catch (error) {
+    console.error('Error initializing auth:', error)
+    return {
+      success: false,
+      error: 'Authentication initialization failed'
+    }
+  }
+}
+
+export default {
+  loginWithGoogle,
+  loginWithEmailPassword,
+  logout,
+  getCurrentUser,
+  initializeAuth
+}

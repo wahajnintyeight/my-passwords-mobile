@@ -77,34 +77,37 @@ const Config: AppConfig = {
   
   api: {
     url: "https://api.wahaj.codes:8443/v2/api",
-    timeout: 10000, // 10 seconds
+    timeout: 10000
   },
   
-  catchErrors: true,
+  catchErrors: false, // We'll handle errors with custom error boundary
+  
   showDevScreens: __DEV__,
+  
   isProduction: !__DEV__,
+  
   enableOcr: true,
   
   credential: {
-    passwordLength: 12,
-    defaultCategory: "website",
+    passwordLength: 16,
+    defaultCategory: "General"
   },
   
   autoLock: {
     enabled: true,
-    timeout: 1000 * 60 * 5, // 5 minutes
+    timeout: 5 * 60 * 1000 // 5 minutes
   },
   
   storage: {
-    prefix: "secure_vault_",
-    encryption: true,
+    prefix: "securevault_",
+    encryption: true
   },
   
   defaults: {
     biometricEnabled: false,
     darkMode: false,
-    notificationsEnabled: true,
-  },
+    notificationsEnabled: true
+  }
 }
 
 export default Config

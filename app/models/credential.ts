@@ -1,38 +1,60 @@
 /**
  * Model for credential data
  */
-import { Instance, SnapshotOut, types } from "mobx-state-tree"
-import { getDomainFromUrl } from "../utils/format-helpers"
-import { generateId } from "../utils/encryption"
+import { types, Instance, SnapshotOut } from 'mobx-state-tree'
+import { generateId } from '../utils/encryption'
+import Config from '../config'
 
 /**
  * Credential model
  */
 export const CredentialModel = types
-  .model("Credential")
+  .model('Credential')
   .props({
     id: types.identifier,
     title: types.string,
     website: types.string,
     username: types.string,
     password: types.string,
-    notes: types.optional(types.string, ""),
+    notes: types.maybeNull(types.string),
+    category: types.optional(types.string, Config.credential.defaultCategory),
     favorite: types.optional(types.boolean, false),
-    category: types.optional(types.string, "website"),
-    icon: types.optional(types.string, ""),
-    lastUpdated: types.optional(types.string, ""),
-    createdAt: types.string,
+    createdAt: types.optional(types.string, () => new Date().toISOString()),
+    updatedAt: types.optional(types.string, () => new Date().toISOString()),
     tags: types.optional(types.array(types.string), []),
   })
-  .views((self) => ({
+  .views(self => ({
     /**
      * Get primary domain from website URL
      */
     get domain(): string {
-      return getDomainFromUrl(self.website)
+      try {
+        if (!self.website) return ''
+        
+        // If it doesn't have http://, add it
+        let url = self.website
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          url = 'https://' + url
+        }
+        
+        const parsedUrl = new URL(url)
+        // Get domain without subdomain
+        const hostParts = parsedUrl.hostname.split('.')
+        
+        // Handle cases like co.uk, com.au, etc.
+        if (hostParts.length > 2 && 
+            ((hostParts[hostParts.length - 2].length <= 3 && hostParts[hostParts.length - 1].length <= 3) ||
+             hostParts[hostParts.length - 1] === 'localhost')) {
+          return hostParts.slice(-3).join('.')
+        }
+        
+        return hostParts.slice(-2).join('.')
+      } catch (error) {
+        // If URL parsing fails, just return the website as is or empty string
+        return self.website || ''
+      }
     },
-  }))
-  .actions((self) => ({
+    
     /**
      * Check if credential contains given search term
      */
@@ -42,58 +64,75 @@ export const CredentialModel = types
       const searchTerm = term.toLowerCase()
       return (
         self.title.toLowerCase().includes(searchTerm) ||
-        self.website.toLowerCase().includes(searchTerm) ||
         self.username.toLowerCase().includes(searchTerm) ||
+        self.website.toLowerCase().includes(searchTerm) ||
+        (self.notes && self.notes.toLowerCase().includes(searchTerm)) ||
         self.domain.toLowerCase().includes(searchTerm) ||
-        self.notes.toLowerCase().includes(searchTerm) ||
         self.category.toLowerCase().includes(searchTerm) ||
-        self.tags.some((tag) => tag.toLowerCase().includes(searchTerm))
+        self.tags.some(tag => tag.toLowerCase().includes(searchTerm))
       )
-    },
-
+    }
+  }))
+  .actions(self => ({
     /**
      * Update credential properties
      */
     update(newData: Partial<typeof self>): void {
-      Object.assign(self, { ...newData, lastUpdated: new Date().toISOString() })
+      Object.keys(newData).forEach(key => {
+        // Skip id to prevent changing it
+        if (key === 'id') return
+        
+        // Handle special cases like tags that need reference copying
+        if (key === 'tags' && Array.isArray(newData.tags)) {
+          self.tags.replace(newData.tags)
+        } else if (key in self) {
+          // @ts-ignore - ignoring to avoid having to type every property
+          self[key] = newData[key]
+        }
+      })
+      
+      // Update the updatedAt timestamp
+      self.updatedAt = new Date().toISOString()
     },
-
+    
     /**
      * Toggle favorite status
      */
     toggleFavorite(): void {
       self.favorite = !self.favorite
-      self.lastUpdated = new Date().toISOString()
+      self.updatedAt = new Date().toISOString()
     },
-
+    
     /**
      * Add a tag
      */
     addTag(tag: string): void {
-      if (!self.tags.includes(tag)) {
+      if (tag && !self.tags.includes(tag)) {
         self.tags.push(tag)
-        self.lastUpdated = new Date().toISOString()
+        self.updatedAt = new Date().toISOString()
       }
     },
-
+    
     /**
      * Remove a tag
      */
     removeTag(tag: string): void {
       const index = self.tags.indexOf(tag)
-      if (index !== -1) {
+      if (index >= 0) {
         self.tags.splice(index, 1)
-        self.lastUpdated = new Date().toISOString()
+        self.updatedAt = new Date().toISOString()
       }
     },
-
+    
     /**
      * Set category
      */
     setCategory(category: string): void {
-      self.category = category
-      self.lastUpdated = new Date().toISOString()
-    },
+      if (category) {
+        self.category = category
+        self.updatedAt = new Date().toISOString()
+      }
+    }
   }))
 
 /**
@@ -102,17 +141,16 @@ export const CredentialModel = types
 export const createCredentialDefaults = () => {
   return {
     id: generateId(),
-    title: "",
-    website: "",
-    username: "",
-    password: "",
-    notes: "",
+    title: '',
+    website: '',
+    username: '',
+    password: '',
+    notes: '',
+    category: Config.credential.defaultCategory,
     favorite: false,
-    category: "website",
-    icon: "",
-    lastUpdated: new Date().toISOString(),
     createdAt: new Date().toISOString(),
-    tags: [],
+    updatedAt: new Date().toISOString(),
+    tags: []
   }
 }
 

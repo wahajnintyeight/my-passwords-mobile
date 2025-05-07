@@ -1,123 +1,288 @@
 /**
  * API service for communicating with the backend
  */
-import { ApiResponse, ApisauceInstance, create } from "apisauce"
-import Config from "../config"
-import { Credential } from "../models/credential"
+import { create } from 'apisauce'
+import Config from '../config'
+import { saveToStorage, loadFromStorage } from '../utils/storage-helpers'
 
-/**
- * Configuring the apisauce instance.
- */
-export const API_BASE_URL = "https://api.wahaj.codes:8443/v2/api"
+// Session storage keys
+const SESSION_ID_KEY = `${Config.storage.prefix}session_id`
 
-export const api = create({
-  baseURL: API_BASE_URL,
-  timeout: 10000,
+// Create the API instance
+const api = create({
+  baseURL: Config.api.url,
+  timeout: Config.api.timeout,
   headers: {
-    Accept: "application/json",
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
   },
 })
 
 /**
- * Helper function to set the auth token.
+ * Setup API request/response transformers and interceptors
  */
-export const setAuthToken = (token: string | null) => {
-  if (token) {
-    api.setHeader("Authorization", `Bearer ${token}`)
-  } else {
-    api.deleteHeader("Authorization")
+export const setupAPI = async () => {
+  // Try to load session from storage on startup
+  const sessionId = await loadFromStorage(SESSION_ID_KEY)
+  if (sessionId) {
+    api.setHeader('sessionId', sessionId)
+  }
+
+  // Add request transformer
+  api.addRequestTransform(request => {
+    console.log('API Request:', request.url, request.method, request.data)
+  })
+
+  // Add response transformer
+  api.addResponseTransform(response => {
+    console.log('API Response:', response.status, response.data)
+    
+    // Handle expired session
+    if (response.status === 401) {
+      // Clear session data if unauthorized
+      clearSession()
+    }
+  })
+}
+
+/**
+ * Create a new API session
+ * @param credentials User login credentials
+ * @returns Promise with session data or error
+ */
+export const createSession = async (credentials: { email: string; password?: string; googleToken?: string }) => {
+  try {
+    const response = await api.put('/createSession', credentials)
+    
+    if (response.ok && response.data?.sessionId) {
+      // Set session header for all future requests
+      await setSession(response.data.sessionId)
+      return { success: true, data: response.data }
+    }
+    
+    return { 
+      success: false, 
+      error: response.data?.error || 'Failed to create session'
+    }
+  } catch (error) {
+    console.error('API error creating session:', error)
+    return { 
+      success: false, 
+      error: 'Network error creating session' 
+    }
   }
 }
 
 /**
- * Process the API response.
+ * Set session ID in storage and headers
+ * @param sessionId Session ID from API
  */
-const processResponse = async <T>(response: ApiResponse<any>) => {
-  if (!response.ok) {
-    const error = new Error(response.data?.message || "An unknown error occurred")
-    throw error
+export const setSession = async (sessionId: string) => {
+  if (sessionId) {
+    await saveToStorage(SESSION_ID_KEY, sessionId)
+    api.setHeader('sessionId', sessionId)
   }
-
-  return response.data as T
 }
 
 /**
- * API functions for credential management
+ * Clear session data
  */
-export const credentialApi = {
-  /**
-   * Fetch all credentials for the authenticated user.
-   */
-  async getCredentials(): Promise<Credential[]> {
-    const response = await api.get("/credentials")
-    return processResponse<Credential[]>(response)
-  },
+export const clearSession = async () => {
+  await saveToStorage(SESSION_ID_KEY, null)
+  api.deleteHeader('sessionId')
+}
 
-  /**
-   * Create a new credential.
-   */
-  async createCredential(credential: Credential): Promise<Credential> {
-    const response = await api.post("/credentials", credential)
-    return processResponse<Credential>(response)
-  },
+/**
+ * Get user profile
+ * @returns Promise with user data
+ */
+export const getUserProfile = async () => {
+  try {
+    const response = await api.get('/user/profile')
+    
+    if (response.ok) {
+      return { success: true, data: response.data }
+    }
+    
+    return { 
+      success: false, 
+      error: response.data?.error || 'Failed to get user profile'
+    }
+  } catch (error) {
+    console.error('API error getting profile:', error)
+    return { 
+      success: false, 
+      error: 'Network error getting user profile' 
+    }
+  }
+}
 
-  /**
-   * Update an existing credential.
-   */
-  async updateCredential(id: string, credential: Partial<Credential>): Promise<Credential> {
+/**
+ * Get all user credentials
+ * @returns Promise with credentials
+ */
+export const getCredentials = async () => {
+  try {
+    const response = await api.get('/credentials')
+    
+    if (response.ok) {
+      return { success: true, data: response.data }
+    }
+    
+    return { 
+      success: false, 
+      error: response.data?.error || 'Failed to get credentials'
+    }
+  } catch (error) {
+    console.error('API error getting credentials:', error)
+    return { 
+      success: false, 
+      error: 'Network error getting credentials' 
+    }
+  }
+}
+
+/**
+ * Save a credential
+ * @param credential Credential data
+ * @returns Promise with result
+ */
+export const saveCredential = async (credential: any) => {
+  try {
+    const response = await api.post('/credentials', credential)
+    
+    if (response.ok) {
+      return { success: true, data: response.data }
+    }
+    
+    return { 
+      success: false, 
+      error: response.data?.error || 'Failed to save credential'
+    }
+  } catch (error) {
+    console.error('API error saving credential:', error)
+    return { 
+      success: false, 
+      error: 'Network error saving credential' 
+    }
+  }
+}
+
+/**
+ * Update a credential
+ * @param id Credential ID
+ * @param credential Updated credential data
+ * @returns Promise with result
+ */
+export const updateCredential = async (id: string, credential: any) => {
+  try {
     const response = await api.put(`/credentials/${id}`, credential)
-    return processResponse<Credential>(response)
-  },
-
-  /**
-   * Delete a credential.
-   */
-  async deleteCredential(id: string): Promise<boolean> {
-    const response = await api.delete(`/credentials/${id}`)
-    return processResponse<boolean>(response)
-  },
-
-  /**
-   * Bulk import credentials.
-   */
-  async importCredentials(credentials: Credential[]): Promise<Credential[]> {
-    const response = await api.post("/credentials/import", { credentials })
-    return processResponse<Credential[]>(response)
-  },
+    
+    if (response.ok) {
+      return { success: true, data: response.data }
+    }
+    
+    return { 
+      success: false, 
+      error: response.data?.error || 'Failed to update credential'
+    }
+  } catch (error) {
+    console.error('API error updating credential:', error)
+    return { 
+      success: false, 
+      error: 'Network error updating credential' 
+    }
+  }
 }
 
 /**
- * API functions for authentication
+ * Delete a credential
+ * @param id Credential ID
+ * @returns Promise with result
  */
-export const authApi = {
-  /**
-   * Authenticate with Google.
-   */
-  async googleAuth(idToken: string): Promise<{ token: string; user: any }> {
-    const response = await api.post("/auth/google", { idToken })
-    return processResponse<{ token: string; user: any }>(response)
-  },
+export const deleteCredential = async (id: string) => {
+  try {
+    const response = await api.delete(`/credentials/${id}`)
+    
+    if (response.ok) {
+      return { success: true, data: response.data }
+    }
+    
+    return { 
+      success: false, 
+      error: response.data?.error || 'Failed to delete credential'
+    }
+  } catch (error) {
+    console.error('API error deleting credential:', error)
+    return { 
+      success: false, 
+      error: 'Network error deleting credential' 
+    }
+  }
+}
 
-  /**
-   * Refresh authentication token.
-   */
-  async refreshToken(refreshToken: string): Promise<{ token: string }> {
-    const response = await api.post("/auth/refresh", { refreshToken })
-    return processResponse<{ token: string }>(response)
-  },
+/**
+ * Export credentials for backup
+ * @returns Promise with exported data
+ */
+export const exportCredentials = async () => {
+  try {
+    const response = await api.get('/credentials/export')
+    
+    if (response.ok) {
+      return { success: true, data: response.data }
+    }
+    
+    return { 
+      success: false, 
+      error: response.data?.error || 'Failed to export credentials'
+    }
+  } catch (error) {
+    console.error('API error exporting credentials:', error)
+    return { 
+      success: false, 
+      error: 'Network error exporting credentials' 
+    }
+  }
+}
 
-  /**
-   * Verify the current token.
-   */
-  async verifyToken(): Promise<{ valid: boolean }> {
-    const response = await api.get("/auth/verify")
-    return processResponse<{ valid: boolean }>(response)
-  },
+/**
+ * Import credentials from backup
+ * @param data Credential data to import
+ * @returns Promise with result
+ */
+export const importCredentials = async (data: any) => {
+  try {
+    const response = await api.post('/credentials/import', data)
+    
+    if (response.ok) {
+      return { success: true, data: response.data }
+    }
+    
+    return { 
+      success: false, 
+      error: response.data?.error || 'Failed to import credentials'
+    }
+  } catch (error) {
+    console.error('API error importing credentials:', error)
+    return { 
+      success: false, 
+      error: 'Network error importing credentials' 
+    }
+  }
 }
 
 export default {
   api,
-  setAuthToken,
-  credentialApi,
-  authApi,
+  setupAPI,
+  createSession,
+  setSession,
+  clearSession,
+  getUserProfile,
+  getCredentials,
+  saveCredential,
+  updateCredential,
+  deleteCredential,
+  exportCredentials,
+  importCredentials
 }

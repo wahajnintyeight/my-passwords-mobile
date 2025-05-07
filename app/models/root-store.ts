@@ -14,14 +14,14 @@ export const RootStoreModel = types
     authStore: types.optional(AuthStoreModel, {}),
     credentialStore: types.optional(CredentialStoreModel, {}),
   })
-  .actions((self) => ({
+  .actions(self => ({
     /**
      * Reset the root store
      */
     reset() {
       self.authStore.reset()
       self.credentialStore.reset()
-    },
+    }
   }))
 
 /**

@@ -1,192 +1,214 @@
 /**
  * Store for managing credentials
  */
-import { Instance, SnapshotOut, types, flow } from "mobx-state-tree"
-import { Credential, CredentialModel, CredentialSnapshot, createCredentialDefaults } from "./credential"
-import { loadFromStorage, saveToStorage } from "../utils/storage-helpers"
-import { encryptData, decryptData } from "../utils/encryption"
-import Config from "../config"
+import { types, flow, Instance, SnapshotOut } from 'mobx-state-tree'
+import { CredentialModel, Credential, CredentialSnapshot, createCredentialDefaults } from './credential'
+import { withEnvironment } from './extensions/with-environment'
+import { withRootStore } from './extensions/with-root-store'
+import { saveToStorage, loadFromStorage } from '../utils/storage-helpers'
+import { generateId } from '../utils/encryption'
+import apiService from '../services/api'
+import Config from '../config'
+
+// Storage keys
+const CREDENTIALS_STORAGE_KEY = `${Config.storage.prefix}credentials`
+const LAST_SYNC_KEY = `${Config.storage.prefix}last_sync`
 
 /**
  * Store to manage credential data
  */
 export const CredentialStoreModel = types
-  .model("CredentialStore")
+  .model('CredentialStore')
   .props({
     credentials: types.array(CredentialModel),
     loading: types.optional(types.boolean, false),
-    lastSyncDate: types.optional(types.string, ""),
-    searchTerm: types.optional(types.string, ""),
-    selectedCategory: types.optional(types.string, "all"),
-    selectedTag: types.optional(types.string, ""),
+    lastSyncDate: types.optional(types.string, ''),
+    searchTerm: types.optional(types.string, ''),
+    selectedCategory: types.optional(types.string, ''),
+    selectedTag: types.optional(types.string, ''),
   })
-  .views((self) => ({
+  .extend(withEnvironment)
+  .extend(withRootStore)
+  .views(self => ({
     /**
      * Get credential by ID
      */
     getCredentialById(id: string): Credential | undefined {
-      return self.credentials.find((credential) => credential.id === id)
+      return self.credentials.find(credential => credential.id === id)
     },
-
+    
     /**
      * Get credentials filtered by category
      */
     getCredentialsByCategory(category: string): Credential[] {
-      if (category === "all") {
-        return self.credentials
-      }
-      return self.credentials.filter((credential) => credential.category === category)
+      if (!category) return self.credentials
+      return self.credentials.filter(credential => credential.category === category)
     },
-
+    
     /**
      * Get favorite credentials
      */
     get favoriteCredentials(): Credential[] {
-      return self.credentials.filter((credential) => credential.favorite)
+      return self.credentials.filter(credential => credential.favorite)
     },
-
+    
     /**
      * Get all unique tags
      */
     get allTags(): string[] {
       const tagsSet = new Set<string>()
-      self.credentials.forEach((credential) => {
-        credential.tags.forEach((tag) => tagsSet.add(tag))
+      self.credentials.forEach(credential => {
+        credential.tags.forEach(tag => tagsSet.add(tag))
       })
       return Array.from(tagsSet).sort()
     },
-
+    
     /**
      * Get credentials filtered by tag
      */
     getCredentialsByTag(tag: string): Credential[] {
-      if (!tag) {
-        return self.credentials
-      }
-      return self.credentials.filter((credential) => credential.tags.includes(tag))
+      if (!tag) return self.credentials
+      return self.credentials.filter(credential => credential.tags.includes(tag))
     },
-
+    
     /**
      * Get filtered and searched credentials
      */
     get filteredCredentials(): Credential[] {
       let filtered = self.credentials
-
-      // Filter by category if selected
-      if (self.selectedCategory !== "all") {
-        filtered = filtered.filter((c) => c.category === self.selectedCategory)
+      
+      // Apply category filter
+      if (self.selectedCategory) {
+        filtered = filtered.filter(credential => credential.category === self.selectedCategory)
       }
-
-      // Filter by tag if selected
+      
+      // Apply tag filter
       if (self.selectedTag) {
-        filtered = filtered.filter((c) => c.tags.includes(self.selectedTag))
+        filtered = filtered.filter(credential => credential.tags.includes(self.selectedTag))
       }
-
-      // Apply search term if any
+      
+      // Apply search
       if (self.searchTerm) {
-        filtered = filtered.filter((c) => c.matchesSearch(self.searchTerm))
+        filtered = filtered.filter(credential => credential.matchesSearch(self.searchTerm))
       }
-
-      return filtered
+      
+      // Sort by title
+      return filtered.slice().sort((a, b) => a.title.localeCompare(b.title))
     },
-
+    
     /**
      * Get all available categories with count
      */
     get categoriesWithCount(): { id: string; name: string; count: number }[] {
-      const categories = [
-        { id: "all", name: "All Passwords", count: self.credentials.length },
-        { id: "website", name: "Websites", count: 0 },
-        { id: "email", name: "Email", count: 0 },
-        { id: "financial", name: "Financial", count: 0 },
-        { id: "personal", name: "Personal", count: 0 },
-        { id: "work", name: "Work", count: 0 },
-        { id: "other", name: "Other", count: 0 },
-      ]
-
-      // Count credentials by category
-      self.credentials.forEach((credential) => {
-        const category = categories.find((c) => c.id === credential.category)
-        if (category) {
-          category.count++
-        }
+      const categoriesMap = new Map<string, number>()
+      
+      // Count credentials in each category
+      self.credentials.forEach(credential => {
+        const category = credential.category
+        categoriesMap.set(category, (categoriesMap.get(category) || 0) + 1)
       })
-
-      return categories
-    },
+      
+      // Convert to array and sort
+      return Array.from(categoriesMap.entries())
+        .map(([name, count]) => ({ id: name, name, count }))
+        .sort((a, b) => a.name.localeCompare(b.name))
+    }
   }))
-  .actions((self) => ({
+  .actions(self => ({
     /**
      * Set loading state
      */
-    setLoading(loading: boolean): void {
+    setLoading(loading: boolean) {
       self.loading = loading
     },
-
+    
     /**
      * Set last sync date
      */
-    setLastSyncDate(date: string): void {
+    setLastSyncDate(date: string) {
       self.lastSyncDate = date
     },
-
+    
     /**
      * Set search term
      */
-    setSearchTerm(term: string): void {
+    setSearchTerm(term: string) {
       self.searchTerm = term
     },
-
+    
     /**
      * Set selected category
      */
-    setSelectedCategory(category: string): void {
+    setSelectedCategory(category: string) {
       self.selectedCategory = category
     },
-
+    
     /**
      * Set selected tag
      */
-    setSelectedTag(tag: string): void {
+    setSelectedTag(tag: string) {
       self.selectedTag = tag
     },
-
+    
     /**
      * Add a credential
      */
     addCredential(credentialData: Partial<CredentialSnapshot>): Credential {
       const newCredential: CredentialSnapshot = {
-        ...createCredentialDefaults(),
-        ...credentialData,
+        id: credentialData.id || generateId(),
+        title: credentialData.title || '',
+        website: credentialData.website || '',
+        username: credentialData.username || '',
+        password: credentialData.password || '',
+        notes: credentialData.notes || '',
+        category: credentialData.category || Config.credential.defaultCategory,
+        favorite: credentialData.favorite || false,
+        createdAt: credentialData.createdAt || new Date().toISOString(),
+        updatedAt: credentialData.updatedAt || new Date().toISOString(),
+        tags: credentialData.tags || [],
       }
       
-      self.credentials.push(newCredential)
-      this.saveCredentials()
+      const credential = CredentialModel.create(newCredential)
+      self.credentials.push(credential)
       
-      return self.credentials[self.credentials.length - 1]
+      // Save to storage
+      self.saveCredentials()
+      
+      return credential
     },
-
+    
     /**
      * Import multiple credentials
      */
     importCredentials(credentialsData: Partial<CredentialSnapshot>[]): Credential[] {
       const newCredentials: Credential[] = []
       
-      credentialsData.forEach((data) => {
+      credentialsData.forEach(data => {
         const newCredential: CredentialSnapshot = {
-          ...createCredentialDefaults(),
-          ...data,
+          id: data.id || generateId(),
+          title: data.title || '',
+          website: data.website || '',
+          username: data.username || '',
+          password: data.password || '',
+          notes: data.notes || '',
+          category: data.category || Config.credential.defaultCategory,
+          favorite: data.favorite || false,
+          createdAt: data.createdAt || new Date().toISOString(),
+          updatedAt: data.updatedAt || new Date().toISOString(),
+          tags: data.tags || [],
         }
         
-        self.credentials.push(newCredential)
-        newCredentials.push(self.credentials[self.credentials.length - 1])
+        const credential = CredentialModel.create(newCredential)
+        self.credentials.push(credential)
+        newCredentials.push(credential)
       })
       
-      this.saveCredentials()
+      // Save to storage
+      self.saveCredentials()
       
       return newCredentials
     },
-
+    
     /**
      * Update a credential
      */
@@ -195,36 +217,44 @@ export const CredentialStoreModel = types
       
       if (credential) {
         credential.update(updates)
-        this.saveCredentials()
+        
+        // Save to storage
+        self.saveCredentials()
+        
         return credential
       }
       
       return undefined
     },
-
+    
     /**
      * Delete a credential
      */
     deleteCredential(id: string): boolean {
-      const index = self.credentials.findIndex((credential) => credential.id === id)
+      const index = self.credentials.findIndex(credential => credential.id === id)
       
-      if (index !== -1) {
+      if (index >= 0) {
         self.credentials.splice(index, 1)
-        this.saveCredentials()
+        
+        // Save to storage
+        self.saveCredentials()
+        
         return true
       }
       
       return false
     },
-
+    
     /**
      * Delete all credentials
      */
     clearAllCredentials(): void {
       self.credentials.clear()
-      this.saveCredentials()
+      
+      // Save to storage
+      self.saveCredentials()
     },
-
+    
     /**
      * Load credentials from local storage
      */
@@ -232,89 +262,130 @@ export const CredentialStoreModel = types
       self.setLoading(true)
       
       try {
-        const encryptedData = yield loadFromStorage(Config.storage.prefix + "credentials")
+        const storedCredentials = yield loadFromStorage(CREDENTIALS_STORAGE_KEY)
+        const lastSync = yield loadFromStorage(LAST_SYNC_KEY)
         
-        if (encryptedData) {
-          let credentialsData
-          
-          if (Config.storage.encryption) {
-            const decrypted = yield decryptData(encryptedData)
-            credentialsData = JSON.parse(decrypted)
-          } else {
-            credentialsData = JSON.parse(encryptedData)
-          }
-          
-          if (Array.isArray(credentialsData)) {
-            self.credentials.clear()
-            credentialsData.forEach((data) => {
-              self.credentials.push(data)
-            })
-          }
+        if (storedCredentials) {
+          self.credentials.clear()
+          storedCredentials.forEach((cred: CredentialSnapshot) => {
+            self.credentials.push(CredentialModel.create(cred))
+          })
         }
+        
+        if (lastSync) {
+          self.setLastSyncDate(lastSync)
+        }
+        
+        return true
       } catch (error) {
-        console.error("Error loading credentials:", error)
+        console.error('Error loading credentials:', error)
+        return false
       } finally {
         self.setLoading(false)
       }
     }),
-
+    
     /**
      * Save credentials to local storage
      */
     saveCredentials: flow(function* () {
       try {
-        const credentialsData = JSON.stringify(self.credentials)
-        
-        if (Config.storage.encryption) {
-          const encrypted = yield encryptData(credentialsData)
-          yield saveToStorage(Config.storage.prefix + "credentials", encrypted)
-        } else {
-          yield saveToStorage(Config.storage.prefix + "credentials", credentialsData)
-        }
+        yield saveToStorage(CREDENTIALS_STORAGE_KEY, self.credentials.toJSON())
+        return true
       } catch (error) {
-        console.error("Error saving credentials:", error)
+        console.error('Error saving credentials:', error)
+        return false
       }
     }),
-
+    
     /**
      * Sync credentials with remote server
      */
-    syncCredentials: flow(function* () {
-      if (!self.loading) {
-        self.setLoading(true)
-        
-        try {
-          // In a real app, we would sync with the backend here
-          // For now, we'll just simulate a successful sync
-          
-          yield new Promise((resolve) => setTimeout(resolve, 1000))
-          
-          self.setLastSyncDate(new Date().toISOString())
-          console.log("Credentials synced successfully")
-          
-          return true
-        } catch (error) {
-          console.error("Error syncing credentials:", error)
-          return false
-        } finally {
-          self.setLoading(false)
-        }
+    syncWithServer: flow(function* () {
+      if (!self.rootStore.authStore.authenticated) {
+        console.warn('Cannot sync credentials: Not authenticated')
+        return { success: false, error: 'Not authenticated' }
       }
       
-      return false
+      self.setLoading(true)
+      
+      try {
+        // Get credentials from server
+        const response = yield apiService.getCredentials()
+        
+        if (response.success && response.data) {
+          // Merge with local credentials giving priority to newer updates
+          const serverCredentials = response.data
+          const localCredMap = new Map()
+          
+          // Build map of local credentials by ID
+          self.credentials.forEach(cred => {
+            localCredMap.set(cred.id, cred)
+          })
+          
+          // Create or update local credentials based on server data
+          serverCredentials.forEach((serverCred: CredentialSnapshot) => {
+            const localCred = localCredMap.get(serverCred.id)
+            
+            if (!localCred) {
+              // New credential from server
+              self.credentials.push(CredentialModel.create(serverCred))
+            } else {
+              // Compare dates and update if server is newer
+              const serverDate = new Date(serverCred.updatedAt || 0).getTime()
+              const localDate = new Date(localCred.updatedAt || 0).getTime()
+              
+              if (serverDate > localDate) {
+                localCred.update(serverCred)
+              }
+            }
+            
+            // Remove from map to track processed items
+            localCredMap.delete(serverCred.id)
+          })
+          
+          // Any remaining local credentials need to be sent to server
+          for (const [_, localCred] of localCredMap.entries()) {
+            yield apiService.saveCredential(localCred.toJSON())
+          }
+          
+          // Update sync timestamp
+          const now = new Date().toISOString()
+          self.setLastSyncDate(now)
+          yield saveToStorage(LAST_SYNC_KEY, now)
+          
+          // Save merged credentials to local storage
+          yield self.saveCredentials()
+          
+          return { success: true }
+        } else {
+          return { 
+            success: false, 
+            error: response.error || 'Failed to sync credentials' 
+          }
+        }
+      } catch (error) {
+        console.error('Error syncing credentials:', error)
+        return { 
+          success: false, 
+          error: 'Network error during sync' 
+        }
+      } finally {
+        self.setLoading(false)
+      }
     }),
-
+    
     /**
      * Reset the store to its initial state
      */
     reset(): void {
       self.credentials.clear()
       self.loading = false
-      self.lastSyncDate = ""
-      self.searchTerm = ""
-      self.selectedCategory = "all"
-      self.selectedTag = ""
-    },
+      self.lastSyncDate = ''
+      self.searchTerm = ''
+      self.selectedCategory = ''
+      self.selectedTag = ''
+    }
   }))
 
 export interface CredentialStore extends Instance<typeof CredentialStoreModel> {}
