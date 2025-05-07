@@ -1,6 +1,7 @@
 /**
  * App configuration
  */
+
 export interface AppConfig {
   /**
    * The app name
@@ -77,37 +78,34 @@ const Config: AppConfig = {
   
   api: {
     url: "https://api.wahaj.codes:8443/v2/api",
-    timeout: 10000
+    timeout: 15000, // 15 seconds
   },
   
-  catchErrors: false, // We'll handle errors with custom error boundary
-  
-  showDevScreens: __DEV__,
-  
-  isProduction: !__DEV__,
-  
+  catchErrors: true,
+  showDevScreens: process.env.NODE_ENV !== "production",
+  isProduction: process.env.NODE_ENV === "production",
   enableOcr: true,
   
   credential: {
     passwordLength: 16,
-    defaultCategory: "General"
+    defaultCategory: "Uncategorized",
   },
   
   autoLock: {
     enabled: true,
-    timeout: 5 * 60 * 1000 // 5 minutes
+    timeout: 5 * 60 * 1000, // 5 minutes
   },
   
   storage: {
-    prefix: "securevault_",
-    encryption: true
+    prefix: "secureVault_",
+    encryption: true,
   },
   
   defaults: {
-    biometricEnabled: false,
+    biometricEnabled: true,
     darkMode: false,
-    notificationsEnabled: true
-  }
+    notificationsEnabled: true,
+  },
 }
 
 export default Config

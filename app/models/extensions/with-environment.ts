@@ -1,36 +1,19 @@
 /**
- * Extension for accessing environment in MST models
+ * Adds the environment property to models
  */
-import { IStateTreeNode } from "mobx-state-tree"
-import { Environment } from "../../services/environment"
+import { types } from 'mobx-state-tree'
+import { Environment } from '../../services/environment'
 
 /**
- * Props for environment extension
+ * Adds the environment property to models
  */
-export interface WithEnvironmentProps {
-  /**
-   * The environment.
-   */
-  environment: Environment
-}
-
-/**
- * Adds an environment property to the node for accessing various environment services.
- */
-export const withEnvironment = (self: IStateTreeNode) => ({
-  views: {
-    /**
-     * The environment.
-     */
-    get environment() {
-      return getEnvironment(self)
-    }
-  }
-})
-
-/**
- * Get the environment from the root node.
- */
-export function getEnvironment(self: any): Environment {
-  return self.__getEnv ? self.__getEnv() : ({} as Environment)
-}
+export const withEnvironment = types
+  .model('withEnvironment')
+  .props({
+    environment: types.optional(types.frozen<Environment>(), {}),
+  })
+  .actions(self => ({
+    setEnvironment(value: Environment) {
+      self.environment = value
+    },
+  }))

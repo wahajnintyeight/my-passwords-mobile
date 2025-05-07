@@ -1,15 +1,15 @@
 /**
  * Root store that combines all other stores
  */
-import { Instance, SnapshotOut, types } from "mobx-state-tree"
-import { AuthStoreModel } from "./auth-store"
-import { CredentialStoreModel } from "./credential-store"
+import { Instance, SnapshotOut, types } from 'mobx-state-tree'
+import { AuthStoreModel } from './auth-store'
+import { CredentialStoreModel } from './credential-store'
 
 /**
  * The RootStore instance
  */
 export const RootStoreModel = types
-  .model("RootStore")
+  .model('RootStore')
   .props({
     authStore: types.optional(AuthStoreModel, {}),
     credentialStore: types.optional(CredentialStoreModel, {}),
@@ -21,7 +21,7 @@ export const RootStoreModel = types
     reset() {
       self.authStore.reset()
       self.credentialStore.reset()
-    }
+    },
   }))
 
 /**

@@ -1,128 +1,257 @@
 /**
- * Authentication service
+ * Auth service for managing authentication
  */
 import * as AuthSession from 'expo-auth-session'
-import { Platform } from 'react-native'
-import apiService from './api'
+import * as Crypto from 'expo-crypto'
+import { loadFromStorage, saveToStorage } from '../utils/storage-helpers'
+import { api } from './api'
+import Config from '../config'
 
-// Google Auth configuration
+/**
+ * Storage keys
+ */
+const AUTH_USER_KEY = 'secureVault_authUser'
+const AUTH_MODE_KEY = 'secureVault_authMode'
+
+/**
+ * Auth modes
+ */
+export enum AuthMode {
+  ONLINE = 'online',
+  OFFLINE = 'offline',
+}
+
+/**
+ * Google auth config
+ */
 const GOOGLE_AUTH_CONFIG = {
-  clientId: Platform.select({
-    ios: 'YOUR_IOS_CLIENT_ID',
-    android: 'YOUR_ANDROID_CLIENT_ID',
-    web: 'YOUR_WEB_CLIENT_ID'
-  }),
+  clientId: '593634276220-5k1a8c0j7p1mt6dji8hamc7pl72e8b4h.apps.googleusercontent.com',
   scopes: ['profile', 'email'],
   redirectUri: AuthSession.makeRedirectUri({
-    scheme: 'securevault',
-    useProxy: true
-  })
+    useProxy: true,
+  }),
 }
 
 /**
- * Login with Google OAuth
- * @returns Promise with authentication result
+ * Auth result interface
  */
-export const loginWithGoogle = async () => {
-  try {
-    const discovery = await AuthSession.fetchDiscoveryAsync('https://accounts.google.com')
-    
-    const request = new AuthSession.AuthRequest({
-      clientId: GOOGLE_AUTH_CONFIG.clientId!,
-      scopes: GOOGLE_AUTH_CONFIG.scopes,
-      redirectUri: GOOGLE_AUTH_CONFIG.redirectUri,
-      usePKCE: true,
-      responseType: AuthSession.ResponseType.Token
-    })
-    
-    const result = await request.promptAsync(discovery)
-    
-    if (result.type === 'success' && result.authentication?.accessToken) {
-      // Send token to backend for verification and session creation
-      const response = await apiService.createSession({
-        email: '',  // This will be extracted from the token on the backend
-        googleToken: result.authentication.accessToken
-      })
+export interface AuthResult {
+  success: boolean
+  data?: any
+  error?: string
+}
+
+/**
+ * Auth service for managing authentication
+ */
+class AuthService {
+  /**
+   * Check if user is authenticated
+   */
+  async checkAuth(): Promise<any> {
+    try {
+      // Check if we have auth data stored
+      const authMode = await loadFromStorage(AUTH_MODE_KEY) as AuthMode
       
-      return response
-    }
-    
-    return {
-      success: false,
-      error: 'Google authentication failed'
-    }
-  } catch (error) {
-    console.error('Error in Google authentication:', error)
-    return {
-      success: false,
-      error: 'Error during Google authentication'
-    }
-  }
-}
-
-/**
- * Login with email and password
- * @param email User email
- * @param password User password
- * @returns Promise with authentication result
- */
-export const loginWithEmailPassword = async (email: string, password: string) => {
-  if (!email || !password) {
-    return {
-      success: false,
-      error: 'Email and password are required'
+      if (authMode === AuthMode.OFFLINE) {
+        // Offline mode, load user from storage
+        return {
+          name: 'Offline User',
+          email: '',
+          offlineMode: true,
+        }
+      } else if (authMode === AuthMode.ONLINE) {
+        // Online mode, load user from storage
+        const userData = await loadFromStorage(AUTH_USER_KEY)
+        
+        if (userData) {
+          // Validate session
+          const sessionValid = await api.ensureSession()
+          
+          if (sessionValid) {
+            return {
+              ...userData,
+              offlineMode: false,
+            }
+          }
+        }
+      }
+      
+      // No valid auth found
+      return null
+    } catch (error) {
+      console.error('Error checking auth:', error)
+      return null
     }
   }
   
-  // Call API to create session
-  return await apiService.createSession({ email, password })
-}
-
-/**
- * Logout current user
- */
-export const logout = async () => {
-  // Clear session data
-  await apiService.clearSession()
-}
-
-/**
- * Get current user profile
- * @returns Promise with user profile data
- */
-export const getCurrentUser = async () => {
-  return await apiService.getUserProfile()
-}
-
-/**
- * Initialize authentication state
- * Checks for existing session tokens and validates them
- * @returns Promise with authentication result
- */
-export const initializeAuth = async () => {
-  try {
-    // API service already loads session ID on startup
-    // Just check if it's valid by making a request
-    const userResponse = await apiService.getUserProfile()
-    
-    return {
-      success: userResponse.success,
-      data: userResponse.data,
-      error: userResponse.error
+  /**
+   * Login with Google
+   */
+  async loginWithGoogle(): Promise<AuthResult> {
+    try {
+      // Create the auth request
+      const authRequest = new AuthSession.AuthRequest({
+        clientId: GOOGLE_AUTH_CONFIG.clientId,
+        scopes: GOOGLE_AUTH_CONFIG.scopes,
+        redirectUri: GOOGLE_AUTH_CONFIG.redirectUri,
+      })
+      
+      // Start the auth flow
+      const result = await authRequest.promptAsync({
+        useProxy: true,
+      })
+      
+      // Check if the user cancelled the flow
+      if (result.type === 'cancel' || result.type === 'dismiss') {
+        return {
+          success: false,
+          error: 'Login cancelled',
+        }
+      }
+      
+      // Check if we got an authentication error
+      if (result.type !== 'success' || !result.authentication) {
+        return {
+          success: false,
+          error: 'Authentication failed',
+        }
+      }
+      
+      // Authenticate with the API
+      const apiResult = await api.loginWithGoogle(result.authentication.accessToken)
+      
+      if (apiResult.ok && apiResult.data) {
+        // Save the user data
+        const userData = {
+          name: apiResult.data.name || '',
+          email: apiResult.data.email || '',
+          profilePic: apiResult.data.profilePic || '',
+        }
+        
+        await saveToStorage(AUTH_USER_KEY, userData)
+        await saveToStorage(AUTH_MODE_KEY, AuthMode.ONLINE)
+        
+        return {
+          success: true,
+          data: userData,
+        }
+      }
+      
+      return {
+        success: false,
+        error: apiResult.data?.message || 'Login failed',
+      }
+    } catch (error) {
+      console.error('Error during Google login:', error)
+      return {
+        success: false,
+        error: 'An error occurred during login',
+      }
     }
-  } catch (error) {
-    console.error('Error initializing auth:', error)
-    return {
-      success: false,
-      error: 'Authentication initialization failed'
+  }
+  
+  /**
+   * Login with email and password
+   */
+  async loginWithEmailPassword(email: string, password: string): Promise<AuthResult> {
+    try {
+      // Validate inputs
+      if (!email || !password) {
+        return {
+          success: false,
+          error: 'Email and password are required',
+        }
+      }
+      
+      // Hash the password for better security
+      const hashedPassword = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        password
+      )
+      
+      // Authenticate with the API
+      const apiResult = await api.login(email, hashedPassword)
+      
+      if (apiResult.ok && apiResult.data) {
+        // Save the user data
+        const userData = {
+          name: apiResult.data.name || '',
+          email: apiResult.data.email || '',
+          profilePic: apiResult.data.profilePic || '',
+        }
+        
+        await saveToStorage(AUTH_USER_KEY, userData)
+        await saveToStorage(AUTH_MODE_KEY, AuthMode.ONLINE)
+        
+        return {
+          success: true,
+          data: userData,
+        }
+      }
+      
+      return {
+        success: false,
+        error: apiResult.data?.message || 'Invalid email or password',
+      }
+    } catch (error) {
+      console.error('Error during email/password login:', error)
+      return {
+        success: false,
+        error: 'An error occurred during login',
+      }
+    }
+  }
+  
+  /**
+   * Continue in offline mode
+   */
+  async continueOffline(): Promise<AuthResult> {
+    try {
+      // Save offline mode preference
+      await saveToStorage(AUTH_MODE_KEY, AuthMode.OFFLINE)
+      
+      return {
+        success: true,
+        data: {
+          name: 'Offline User',
+          email: '',
+          profilePic: '',
+        },
+      }
+    } catch (error) {
+      console.error('Error continuing offline:', error)
+      return {
+        success: false,
+        error: 'An error occurred',
+      }
+    }
+  }
+  
+  /**
+   * Logout the user
+   */
+  async logout(): Promise<boolean> {
+    try {
+      // Get the current auth mode
+      const authMode = await loadFromStorage(AUTH_MODE_KEY) as AuthMode
+      
+      if (authMode === AuthMode.ONLINE) {
+        // Logout from the API
+        await api.logout()
+      }
+      
+      // Clear auth data
+      await saveToStorage(AUTH_USER_KEY, null)
+      await saveToStorage(AUTH_MODE_KEY, null)
+      
+      return true
+    } catch (error) {
+      console.error('Error during logout:', error)
+      return false
     }
   }
 }
 
-export default {
-  loginWithGoogle,
-  loginWithEmailPassword,
-  logout,
-  getCurrentUser,
-  initializeAuth
-}
+// Singleton instance
+export const authService = new AuthService()

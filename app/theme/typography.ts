@@ -1,191 +1,216 @@
 /**
- * Typography styles for the app
+ * Typography definitions for consistent text styling
  */
+
 import { Platform } from 'react-native'
 
 /**
  * Font family definitions
  */
 export const fonts = {
-  // Using system fonts for best performance and native feel
+  /**
+   * The primary font used for most text
+   */
   primary: Platform.select({
     ios: 'System',
     android: 'Roboto',
-    web: 'system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif'
+    default: 'System'
   }),
   
+  /**
+   * Alternative font for emphasis or branding
+   */
   secondary: Platform.select({
     ios: 'Georgia',
     android: 'serif',
-    web: 'Georgia, serif'
+    default: 'serif'
   }),
   
+  /**
+   * Monospace font for displaying code or fixed-width content
+   */
   code: Platform.select({
     ios: 'Courier',
     android: 'monospace',
-    web: 'Consolas, monospace'
+    default: 'monospace'
   }),
 }
 
 /**
- * Font weight definitions
+ * Font sizes used throughout the app
  */
-export const fontWeights = {
-  thin: '100' as const,
-  extralight: '200' as const,
-  light: '300' as const,
-  regular: '400' as const,
-  medium: '500' as const,
-  semibold: '600' as const,
-  bold: '700' as const,
-  extrabold: '800' as const,
-  black: '900' as const,
-}
-
-/**
- * Font sizes by usage
- */
-export const fontSize = {
-  // Size scale
+export const fontSizes = {
+  tiny: 10,
+  xxs: 11,
   xs: 12,
   sm: 14,
   md: 16,
   lg: 18,
   xl: 20,
   xxl: 24,
-  xxxl: 32,
   
-  // Semantic sizes
+  // Specific use cases
+  heading1: 32,
+  heading2: 28,
+  heading3: 24,
+  heading4: 20,
+  heading5: 18,
+  
   caption: 12,
   button: 16,
-  body: 16,
-  bodySmall: 14,
-  title: 18,
-  headline: 24,
-  subheading: 20,
-  display: 32,
+  
+  // For specific components
+  tabLabel: 10,
+  inputText: 16,
+  navbar: 18,
+  dialog: 16,
 }
 
 /**
  * Line height multipliers
  */
-export const lineHeight = {
-  xs: 1.2,
-  sm: 1.3,
-  md: 1.5,
-  lg: 1.7,
-  xl: 1.8,
-  xxl: 2,
+export const lineHeights = {
+  tighter: 1.1,
+  tight: 1.25,
+  normal: 1.5,
+  relaxed: 1.75,
+  loose: 2,
 }
 
 /**
- * Text styles for consistent typography
+ * Font weights
+ */
+export const fontWeights = {
+  light: '300',
+  normal: '400',
+  medium: '500',
+  semibold: '600',
+  bold: '700',
+  heavy: '800',
+}
+
+/**
+ * Pre-defined text styles
  */
 export const textVariants = {
-  defaults: {
+  // Headings
+  h1: {
     fontFamily: fonts.primary,
-    fontSize: fontSize.body,
-    fontWeight: fontWeights.regular,
-    color: 'text',
-  },
-  
-  // Display and heading styles
-  display: {
-    fontSize: fontSize.display,
+    fontSize: fontSizes.heading1,
     fontWeight: fontWeights.bold,
-    lineHeight: fontSize.display * lineHeight.xs,
+    lineHeight: fontSizes.heading1 * lineHeights.tight,
+    letterSpacing: -0.5,
   },
   
-  heading1: {
-    fontSize: fontSize.xxxl,
+  h2: {
+    fontFamily: fonts.primary,
+    fontSize: fontSizes.heading2,
     fontWeight: fontWeights.bold,
-    lineHeight: fontSize.xxxl * lineHeight.xs,
+    lineHeight: fontSizes.heading2 * lineHeights.tight,
+    letterSpacing: -0.4,
   },
   
-  heading2: {
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeights.bold,
-    lineHeight: fontSize.xxl * lineHeight.xs,
-  },
-  
-  heading3: {
-    fontSize: fontSize.xl,
+  h3: {
+    fontFamily: fonts.primary,
+    fontSize: fontSizes.heading3,
     fontWeight: fontWeights.semibold,
-    lineHeight: fontSize.xl * lineHeight.sm,
+    lineHeight: fontSizes.heading3 * lineHeights.tight,
+    letterSpacing: -0.3,
   },
   
-  heading4: {
-    fontSize: fontSize.lg,
+  h4: {
+    fontFamily: fonts.primary,
+    fontSize: fontSizes.heading4,
     fontWeight: fontWeights.semibold,
-    lineHeight: fontSize.lg * lineHeight.sm,
+    lineHeight: fontSizes.heading4 * lineHeights.tight,
+    letterSpacing: -0.2,
   },
   
-  // Body text styles
-  body: {
-    fontSize: fontSize.body,
-    lineHeight: fontSize.body * lineHeight.md,
+  h5: {
+    fontFamily: fonts.primary,
+    fontSize: fontSizes.heading5,
+    fontWeight: fontWeights.medium,
+    lineHeight: fontSizes.heading5 * lineHeights.tight,
+    letterSpacing: -0.1,
   },
   
-  bodyBold: {
-    fontSize: fontSize.body,
-    fontWeight: fontWeights.bold,
-    lineHeight: fontSize.body * lineHeight.md,
+  // Body text
+  body1: {
+    fontFamily: fonts.primary,
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.normal,
+    lineHeight: fontSizes.md * lineHeights.normal,
   },
   
-  bodySmall: {
-    fontSize: fontSize.bodySmall,
-    lineHeight: fontSize.bodySmall * lineHeight.md,
+  body2: {
+    fontFamily: fonts.primary,
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.normal,
+    lineHeight: fontSizes.sm * lineHeights.normal,
   },
   
-  // Other text styles
+  body3: {
+    fontFamily: fonts.primary,
+    fontSize: fontSizes.xs,
+    fontWeight: fontWeights.normal,
+    lineHeight: fontSizes.xs * lineHeights.normal,
+  },
+  
+  // UI Elements
   caption: {
-    fontSize: fontSize.caption,
-    lineHeight: fontSize.caption * lineHeight.md,
+    fontFamily: fonts.primary,
+    fontSize: fontSizes.caption,
+    fontWeight: fontWeights.normal,
+    lineHeight: fontSizes.caption * lineHeights.normal,
   },
   
   button: {
-    fontSize: fontSize.button,
+    fontFamily: fonts.primary,
+    fontSize: fontSizes.button,
     fontWeight: fontWeights.medium,
-    lineHeight: fontSize.button * lineHeight.sm,
-    textTransform: 'none' as const, // 'uppercase' for Material style
-  },
-  
-  buttonSmall: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeights.medium,
-    lineHeight: fontSize.sm * lineHeight.sm,
-    textTransform: 'none' as const,
+    lineHeight: fontSizes.button * lineHeights.tight,
+    letterSpacing: 0.3,
   },
   
   label: {
-    fontSize: fontSize.sm,
+    fontFamily: fonts.primary,
+    fontSize: fontSizes.sm,
     fontWeight: fontWeights.medium,
-    lineHeight: fontSize.sm * lineHeight.sm,
+    lineHeight: fontSizes.sm * lineHeights.tight,
   },
   
-  link: {
-    fontSize: fontSize.body,
-    lineHeight: fontSize.body * lineHeight.md,
-    textDecorationLine: 'underline' as const,
-  },
-  
-  // Tab text styles
   tabLabel: {
-    fontSize: fontSize.sm,
+    fontFamily: fonts.primary,
+    fontSize: fontSizes.tabLabel,
     fontWeight: fontWeights.medium,
-    lineHeight: fontSize.sm * lineHeight.xs,
+    lineHeight: fontSizes.tabLabel * lineHeights.tight,
   },
   
-  // Toolbar text styles
-  toolbar: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeights.semibold,
-    lineHeight: fontSize.lg * lineHeight.xs,
+  // Special cases
+  code: {
+    fontFamily: fonts.code,
+    fontSize: fontSizes.sm,
+    lineHeight: fontSizes.sm * lineHeights.normal,
   },
   
-  // Text input styles
-  input: {
-    fontSize: fontSize.body,
-    lineHeight: fontSize.body * lineHeight.md,
+  formLabel: {
+    fontFamily: fonts.primary,
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.medium,
+    lineHeight: fontSizes.sm * lineHeights.tight,
+  },
+  
+  formInput: {
+    fontFamily: fonts.primary,
+    fontSize: fontSizes.inputText,
+    fontWeight: fontWeights.normal,
+    lineHeight: fontSizes.inputText * lineHeights.tight,
+  },
+  
+  formError: {
+    fontFamily: fonts.primary,
+    fontSize: fontSizes.xs,
+    fontWeight: fontWeights.normal,
+    lineHeight: fontSizes.xs * lineHeights.tight,
   },
 }

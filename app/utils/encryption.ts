@@ -1,129 +1,146 @@
 /**
- * Utilities for encryption and secure data handling
+ * Encryption utilities
  */
-import * as Crypto from 'expo-crypto'
 import CryptoJS from 'crypto-js'
+import Config from '../config'
 
-// Default encryption key, in production this would be securely stored in environment variables
-// or secure storage, and unique per user
-const DEFAULT_ENCRYPTION_KEY = "secureVaultAppEncryptionKey2023!"
+// The secret key used for encryption
+const SECRET_KEY = 'secure_vault_app_encryption_key'
 
 /**
- * Generate a unique ID using cryptographic random values
- * @returns Unique identifier string
+ * Encrypt a string
+ * @param text The text to encrypt
+ * @param key Optional encryption key
+ * @returns The encrypted text
+ */
+export function encrypt(text: string, key: string = SECRET_KEY): string {
+  try {
+    const encrypted = CryptoJS.AES.encrypt(text, key).toString()
+    return encrypted
+  } catch (error) {
+    console.error('Encryption error:', error)
+    return text // Return original text on error
+  }
+}
+
+/**
+ * Decrypt an encrypted string
+ * @param encryptedText The encrypted text
+ * @param key Optional encryption key 
+ * @returns The decrypted text
+ */
+export function decrypt(encryptedText: string, key: string = SECRET_KEY): string {
+  try {
+    const decrypted = CryptoJS.AES.decrypt(encryptedText, key).toString(CryptoJS.enc.Utf8)
+    return decrypted
+  } catch (error) {
+    console.error('Decryption error:', error)
+    return encryptedText // Return encrypted text on error
+  }
+}
+
+/**
+ * Generate a random ID
+ * @returns A random ID string
  */
 export function generateId(): string {
-  return Crypto.randomUUID()
+  return Date.now().toString(36) + Math.random().toString(36).substring(2)
 }
 
 /**
- * Generate a cryptographically secure random value
- * @param length Length of the random value
- * @returns Random string
+ * Calculate password strength score (0-100)
+ * @param password The password to check
+ * @returns A score from 0 (weakest) to 100 (strongest)
  */
-export function generateRandomValue(length: number = 32): string {
-  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_-+=<>?'
-  let result = ''
+export function calculatePasswordStrength(password: string): number {
+  if (!password) return 0
   
-  for (let i = 0; i < length; i++) {
-    // Use crypto-secure random number generation
-    const randomValues = new Uint8Array(1)
-    Crypto.getRandomBytes(randomValues)
-    result += charset[randomValues[0] % charset.length]
-  }
+  let score = 0
   
-  return result
-}
-
-/**
- * Encrypt data using AES encryption
- * @param data Data to encrypt
- * @param key Optional encryption key (uses default if not provided)
- * @returns Encrypted string
- */
-export async function encryptData(data: string, key: string = DEFAULT_ENCRYPTION_KEY): Promise<string> {
-  return CryptoJS.AES.encrypt(data, key).toString()
-}
-
-/**
- * Decrypt data using AES encryption
- * @param encryptedData Encrypted data string
- * @param key Optional encryption key (uses default if not provided)
- * @returns Decrypted string
- */
-export async function decryptData(encryptedData: string, key: string = DEFAULT_ENCRYPTION_KEY): Promise<string> {
-  const bytes = CryptoJS.AES.decrypt(encryptedData, key)
-  return bytes.toString(CryptoJS.enc.Utf8)
-}
-
-/**
- * Hash a string using SHA-256
- * @param data String to hash
- * @returns Hashed string
- */
-export async function hashString(data: string): Promise<string> {
-  return await Crypto.digestStringAsync(
-    Crypto.CryptoDigestAlgorithm.SHA256,
-    data
-  )
-}
-
-/**
- * Securely compare two strings in constant time
- * This helps prevent timing attacks when comparing sensitive values
- * @param a First string
- * @param b Second string
- * @returns True if strings are equal
- */
-export function secureCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    return false
-  }
+  // Length contribution (max 25 points)
+  const lengthScore = Math.min(password.length * 2, 25)
+  score += lengthScore
   
-  let result = 0
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i)
-  }
+  // Character variety contribution (max 50 points)
+  const hasLowercase = /[a-z]/.test(password)
+  const hasUppercase = /[A-Z]/.test(password)
+  const hasDigits = /\d/.test(password)
+  const hasSpecial = /[^a-zA-Z0-9]/.test(password)
   
-  return result === 0
+  score += hasLowercase ? 10 : 0
+  score += hasUppercase ? 10 : 0
+  score += hasDigits ? 15 : 0
+  score += hasSpecial ? 15 : 0
+  
+  // Complexity contribution (max 25 points)
+  const uniqueChars = new Set(password.split('')).size
+  const uniqueRatio = uniqueChars / password.length
+  const complexityScore = Math.min(Math.round(uniqueRatio * 25), 25)
+  score += complexityScore
+  
+  return score
 }
 
 /**
- * Mask a sensitive string (like credit card) for display
- * @param text String to mask
- * @param visibleStartChars Number of characters to show at start
- * @param visibleEndChars Number of characters to show at end
- * @returns Masked string
+ * Get password strength category
+ * @param score The password strength score (0-100)
+ * @returns A string categorizing the password strength
  */
-export function maskSensitiveText(
-  text: string,
-  visibleStartChars: number = 4,
-  visibleEndChars: number = 4
+export function getPasswordStrengthCategory(score: number): string {
+  if (score < 30) return 'Very Weak'
+  if (score < 50) return 'Weak'
+  if (score < 70) return 'Moderate'
+  if (score < 90) return 'Strong'
+  return 'Very Strong'
+}
+
+/**
+ * Generate a random password
+ * @param length The length of the password
+ * @param includeUppercase Include uppercase letters
+ * @param includeNumbers Include numbers
+ * @param includeSymbols Include symbols
+ * @returns A random password
+ */
+export function generatePassword(
+  length: number = Config.credential.passwordLength,
+  includeUppercase: boolean = true,
+  includeNumbers: boolean = true,
+  includeSymbols: boolean = true
 ): string {
-  if (!text) return ""
-  if (text.length <= visibleStartChars + visibleEndChars) {
-    return text
+  const lowercaseChars = 'abcdefghijklmnopqrstuvwxyz'
+  const uppercaseChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  const numberChars = '0123456789'
+  const symbolChars = '!@#$%^&*()_+[]{}|;:,.<>?'
+  
+  // Start with lowercase
+  let allChars = lowercaseChars
+  
+  // Add other char types based on options
+  if (includeUppercase) allChars += uppercaseChars
+  if (includeNumbers) allChars += numberChars
+  if (includeSymbols) allChars += symbolChars
+  
+  let password = ''
+  
+  // Ensure at least one character of each type
+  if (includeUppercase) {
+    password += uppercaseChars.charAt(Math.floor(Math.random() * uppercaseChars.length))
   }
   
-  const start = text.substring(0, visibleStartChars)
-  const end = text.substring(text.length - visibleEndChars)
-  const maskedLength = text.length - visibleStartChars - visibleEndChars
-  const mask = "•".repeat(maskedLength)
+  if (includeNumbers) {
+    password += numberChars.charAt(Math.floor(Math.random() * numberChars.length))
+  }
   
-  return `${start}${mask}${end}`
-}
-
-/**
- * Calculate a unique hash for a set of credential data
- * Useful for detecting duplicate entries
- * @param data Credential data to hash
- * @returns Hash string
- */
-export async function calculateCredentialHash(data: {
-  website: string
-  username: string
-  password?: string
-}): Promise<string> {
-  const stringToHash = `${data.website.toLowerCase()}:${data.username.toLowerCase()}`
-  return await hashString(stringToHash)
+  if (includeSymbols) {
+    password += symbolChars.charAt(Math.floor(Math.random() * symbolChars.length))
+  }
+  
+  // Fill the rest with random characters
+  for (let i = password.length; i < length; i++) {
+    password += allChars.charAt(Math.floor(Math.random() * allChars.length))
+  }
+  
+  // Shuffle the password
+  return password.split('').sort(() => 0.5 - Math.random()).join('')
 }

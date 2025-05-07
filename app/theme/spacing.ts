@@ -1,144 +1,110 @@
 /**
- * Spacing values for consistent layout
+ * Spacing definitions for consistent padding and margins
  */
 
 /**
- * Base unit for spacing
+ * Base unit for all spacing
  */
-const UNIT = 8
+export const unit = 8
 
 /**
- * Default spacing values
+ * Spacing values for use in padding, margin, etc.
  */
 export const spacing = {
   // Base unit
-  unit: UNIT,
+  unit,
   
-  // Absolute spacing values
-  micro: UNIT * 0.25, // 2
-  tiny: UNIT * 0.5,   // 4
-  xxs: UNIT * 0.75,   // 6
-  xs: UNIT,           // 8
-  sm: UNIT * 1.5,     // 12
-  md: UNIT * 2,       // 16
-  lg: UNIT * 3,       // 24
-  xl: UNIT * 4,       // 32
-  xxl: UNIT * 6,      // 48
+  // Smaller increments
+  micro: unit / 4, // 2
+  tiny: unit / 2, // 4
+  xxs: unit * 0.75, // 6
   
-  // Screen specific spacing
-  screenHorizontal: UNIT * 2,
-  screenTop: UNIT * 2,
-  screenBottom: UNIT * 2,
+  // Standard increments
+  xs: unit, // 8
+  sm: unit * 1.5, // 12
+  md: unit * 2, // 16
+  lg: unit * 3, // 24
+  xl: unit * 4, // 32
+  xxl: unit * 6, // 48
   
-  // Card padding
-  cardPadding: UNIT * 2,
+  // Screen edge padding
+  screenHorizontal: unit * 2, // 16
+  screenTop: unit * 2, // 16
+  screenBottom: unit * 2, // 16
   
-  // Input fields
-  inputHeight: UNIT * 6,
-  inputPadding: UNIT * 1.5,
+  // Card and component padding
+  cardPadding: unit * 2, // 16
+  cardGap: unit, // 8
   
-  // Button sizes
-  buttonHeight: UNIT * 6,
-  buttonPaddingHorizontal: UNIT * 2,
-  buttonPaddingVertical: UNIT * 1.5,
-  buttonBorderRadius: UNIT,
+  // Grid spacing
+  gridGutter: unit, // 8
+  gridMargin: unit * 2, // 16
   
-  // Icon button sizes
-  iconButtonSmall: UNIT * 4,
-  iconButtonMedium: UNIT * 5,
-  iconButtonLarge: UNIT * 6,
-  
-  // Avatar sizes
-  avatarSmall: UNIT * 4,
-  avatarMedium: UNIT * 6,
-  avatarLarge: UNIT * 10,
-  
-  // Tab bar
-  tabBarHeight: UNIT * 7,
-  
-  // Z-index levels
-  zIndex: {
-    base: 1,
-    card: 10,
-    dialog: 20,
-    popover: 30,
-    overlay: 40,
-    modal: 50,
-    toast: 60,
+  // Icon sizing and spacing
+  iconSize: {
+    xs: unit * 1.5, // 12
+    sm: unit * 2, // 16
+    md: unit * 3, // 24
+    lg: unit * 4, // 32
+    xl: unit * 6, // 48
   },
+  
+  // Button sizing
+  buttonHeight: {
+    xs: unit * 3, // 24
+    sm: unit * 4, // 32
+    md: unit * 5, // 40
+    lg: unit * 6, // 48
+  },
+  
+  // Form elements
+  inputHeight: unit * 5.5, // 44
+  inputPadding: unit * 1.5, // 12
+  inputBorderWidth: 1,
+  inputBorderRadius: unit, // 8
   
   // Border radius
   borderRadius: {
-    none: 0,
-    xs: 4,
-    sm: 8,
-    md: 12,
-    lg: 16,
-    xl: 24,
-    pill: 1000, // Large value for fully rounded elements
-    circular: 10000, // Even larger value for circular elements
+    xs: unit / 2, // 4
+    sm: unit, // 8
+    md: unit * 1.5, // 12
+    lg: unit * 2, // 16
+    xl: unit * 3, // 24
+    round: 9999,
+  },
+  
+  // Z-index values
+  zIndex: {
+    base: 1,
+    card: 10,
+    modal: 100,
+    overlay: 1000,
+    toast: 2000,
+    tooltip: 3000,
   },
   
   // Shadows
   shadow: {
-    none: {
-      shadowColor: 'transparent',
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0,
-      shadowRadius: 0,
-      elevation: 0,
-    },
-    xs: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 2,
-      elevation: 1,
-    },
     sm: {
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 2,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.18,
+      shadowRadius: 1.0,
+      elevation: 1,
     },
     md: {
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
-      elevation: 3,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.23,
+      shadowRadius: 2.62,
+      elevation: 4,
     },
     lg: {
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.2,
-      shadowRadius: 16,
-      elevation: 4,
-    },
-    xl: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.25,
-      shadowRadius: 24,
-      elevation: 6,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.30,
+      shadowRadius: 4.65,
+      elevation: 8,
     },
   },
-}
-
-// Additional size multipliers for components
-export const size = {
-  xxs: 0.25,
-  xs: 0.5,
-  sm: 0.75,
-  md: 1,
-  lg: 1.5,
-  xl: 2,
-  xxl: 3,
-  
-  // Legacy size definitions for backward compatibility
-  small: 0.75,
-  medium: 1,
-  large: 1.5,
-  extraLarge: 2,
 }

@@ -1,222 +1,215 @@
 /**
- * Helper functions for formatting and manipulating data
+ * Helper functions for formatting and transforming data
  */
-
-/**
- * Extract domain from a URL string
- * @param url URL string to extract domain from
- * @returns The domain name without protocol or paths
- */
-export function getDomainFromUrl(url: string): string {
-  if (!url) return ""
-  
-  try {
-    // Add protocol if not present to make URL parsing work
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
-      url = "https://" + url
-    }
-    
-    const urlObj = new URL(url)
-    // Remove www. prefix if present
-    return urlObj.hostname.replace(/^www\./, "")
-  } catch (e) {
-    // If URL parsing fails, try a simple regex approach
-    const match = url.match(/^(?:https?:\/\/)?(?:www\.)?([^\/]+)/)
-    return match ? match[1] : url
-  }
-}
 
 /**
  * Format a date string to a human-readable format
- * @param dateString ISO date string
+ * @param dateString Date string to format
+ * @param showTime Whether to include the time
  * @returns Formatted date string
  */
-export function formatDate(dateString: string): string {
-  if (!dateString) return ""
-  
+export function formatDate(dateString: string, showTime: boolean = false): string {
   try {
     const date = new Date(dateString)
-    return date.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    })
-  } catch (e) {
+    
+    if (isNaN(date.getTime())) {
+      return dateString
+    }
+    
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }
+    
+    if (showTime) {
+      options.hour = '2-digit'
+      options.minute = '2-digit'
+    }
+    
+    return date.toLocaleDateString(undefined, options)
+  } catch (error) {
+    console.error('Error formatting date:', error)
     return dateString
   }
 }
 
 /**
- * Format a date string to include time
- * @param dateString ISO date string
- * @returns Formatted date with time
+ * Format a relative time (e.g., "2 days ago")
+ * @param dateString Date string to format
+ * @returns Relative time string
  */
-export function formatDateTime(dateString: string): string {
-  if (!dateString) return ""
-  
+export function formatRelativeTime(dateString: string): string {
   try {
     const date = new Date(dateString)
-    return date.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  } catch (e) {
-    return dateString
-  }
-}
-
-/**
- * Get time elapsed since the given date in a human-readable format
- * @param dateString ISO date string
- * @returns Human-readable elapsed time (e.g., "2 days ago")
- */
-export function getTimeAgo(dateString: string): string {
-  if (!dateString) return ""
-  
-  try {
-    const date = new Date(dateString)
+    
+    if (isNaN(date.getTime())) {
+      return dateString
+    }
+    
     const now = new Date()
-    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+    const diffMs = now.getTime() - date.getTime()
+    const diffSecs = Math.floor(diffMs / 1000)
+    const diffMins = Math.floor(diffSecs / 60)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+    const diffMonths = Math.floor(diffDays / 30)
+    const diffYears = Math.floor(diffDays / 365)
     
-    let interval = Math.floor(seconds / 31536000)
-    if (interval >= 1) {
-      return interval === 1 
-        ? "1 year ago" 
-        : `${interval} years ago`
+    if (diffSecs < 60) {
+      return 'just now'
+    } else if (diffMins < 60) {
+      return `${diffMins} ${diffMins === 1 ? 'minute' : 'minutes'} ago`
+    } else if (diffHours < 24) {
+      return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`
+    } else if (diffDays < 30) {
+      return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`
+    } else if (diffMonths < 12) {
+      return `${diffMonths} ${diffMonths === 1 ? 'month' : 'months'} ago`
+    } else {
+      return `${diffYears} ${diffYears === 1 ? 'year' : 'years'} ago`
     }
-    
-    interval = Math.floor(seconds / 2592000)
-    if (interval >= 1) {
-      return interval === 1 
-        ? "1 month ago" 
-        : `${interval} months ago`
-    }
-    
-    interval = Math.floor(seconds / 86400)
-    if (interval >= 1) {
-      return interval === 1 
-        ? "1 day ago" 
-        : `${interval} days ago`
-    }
-    
-    interval = Math.floor(seconds / 3600)
-    if (interval >= 1) {
-      return interval === 1 
-        ? "1 hour ago" 
-        : `${interval} hours ago`
-    }
-    
-    interval = Math.floor(seconds / 60)
-    if (interval >= 1) {
-      return interval === 1 
-        ? "1 minute ago" 
-        : `${interval} minutes ago`
-    }
-    
-    return seconds < 5 ? "just now" : `${Math.floor(seconds)} seconds ago`
-  } catch (e) {
+  } catch (error) {
+    console.error('Error formatting relative time:', error)
     return dateString
   }
 }
 
 /**
- * Truncate a string to a maximum length with ellipsis
+ * Extract domain from a URL string
+ * @param url URL string
+ * @returns Domain name
+ */
+export function extractDomain(url: string): string {
+  if (!url) return ''
+  
+  try {
+    // Add protocol if missing
+    if (!url.match(/^[a-zA-Z]+:\/\//)) {
+      url = 'https://' + url
+    }
+    
+    const urlObj = new URL(url)
+    let domain = urlObj.hostname
+    
+    // Remove 'www.' prefix if present
+    if (domain.startsWith('www.')) {
+      domain = domain.substring(4)
+    }
+    
+    return domain
+  } catch (error) {
+    // If URL parsing fails, try a simple regex
+    try {
+      const match = url.match(/^(?:https?:\/\/)?(?:www\.)?([^\/]+)/)
+      if (match && match[1]) {
+        return match[1]
+      }
+    } catch (innerError) {
+      console.error('Error extracting domain with regex:', innerError)
+    }
+    
+    console.error('Error extracting domain:', error)
+    return url
+  }
+}
+
+/**
+ * Get the base domain (e.g., 'example.com' from 'sub.example.com')
+ * @param domain Domain name
+ * @returns Base domain
+ */
+export function getBaseDomain(domain: string): string {
+  try {
+    // Split by dots
+    const parts = domain.split('.')
+    
+    // If only 2 parts (or fewer), return as is
+    if (parts.length <= 2) {
+      return domain
+    }
+    
+    // Handle special cases like co.uk, com.au, etc.
+    const secondLevelDomains = ['co', 'com', 'org', 'net', 'edu', 'gov', 'mil']
+    const topLevelDomains = ['uk', 'au', 'ca', 'nz', 'za', 'sg', 'jp', 'hk', 'in']
+    
+    // Check if it's a special case with second-level domain
+    if (
+      parts.length >= 3 && 
+      secondLevelDomains.includes(parts[parts.length - 2]) && 
+      topLevelDomains.includes(parts[parts.length - 1])
+    ) {
+      // Return last 3 parts (e.g., example.co.uk)
+      return parts.slice(-3).join('.')
+    }
+    
+    // Otherwise return last 2 parts (e.g., example.com)
+    return parts.slice(-2).join('.')
+  } catch (error) {
+    console.error('Error getting base domain:', error)
+    return domain
+  }
+}
+
+/**
+ * Get initials from a name
+ * @param name Name to get initials from
+ * @param count Maximum number of initials
+ * @returns Initials string
+ */
+export function getInitials(name: string, count: number = 2): string {
+  if (!name) return ''
+  
+  try {
+    // Split by spaces
+    const parts = name.split(' ').filter(part => part.length > 0)
+    
+    // If empty after filtering, return empty string
+    if (parts.length === 0) {
+      return ''
+    }
+    
+    // If only one part, return first 1-2 characters
+    if (parts.length === 1) {
+      return parts[0].substring(0, count).toUpperCase()
+    }
+    
+    // Get first letter of each part
+    let initials = parts.map(part => part.charAt(0)).join('')
+    
+    // Limit to count
+    return initials.substring(0, count).toUpperCase()
+  } catch (error) {
+    console.error('Error getting initials:', error)
+    return name.substring(0, count).toUpperCase()
+  }
+}
+
+/**
+ * Format a file size
+ * @param bytes Size in bytes
+ * @param decimals Number of decimal places
+ * @returns Formatted size string
+ */
+export function formatFileSize(bytes: number, decimals: number = 1): string {
+  if (!bytes || bytes === 0) return '0 Bytes'
+  
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(decimals)) + ' ' + sizes[i]
+}
+
+/**
+ * Truncate text with ellipsis
  * @param text Text to truncate
- * @param length Maximum length before truncation
- * @returns Truncated text with ellipsis if needed
+ * @param maxLength Maximum length
+ * @returns Truncated text
  */
-export function truncateText(text: string, length: number): string {
-  if (!text) return ""
-  if (text.length <= length) return text
+export function truncateText(text: string, maxLength: number = 50): string {
+  if (!text) return ''
+  if (text.length <= maxLength) return text
   
-  return text.substring(0, length) + "..."
-}
-
-/**
- * Generate a random password with configurable options
- * @param length Password length
- * @param options Configuration options for password generation
- * @returns Generated password
- */
-export function generatePassword(
-  length = 12,
-  options = {
-    lowercase: true,
-    uppercase: true,
-    numbers: true,
-    symbols: true,
-  }
-): string {
-  const lowercaseChars = "abcdefghijklmnopqrstuvwxyz"
-  const uppercaseChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-  const numberChars = "0123456789"
-  const symbolChars = "!@#$%^&*()_-+=<>?"
-  
-  let validChars = ""
-  if (options.lowercase) validChars += lowercaseChars
-  if (options.uppercase) validChars += uppercaseChars
-  if (options.numbers) validChars += numberChars
-  if (options.symbols) validChars += symbolChars
-  
-  // Ensure at least lowercase is used if nothing is selected
-  if (!validChars) validChars = lowercaseChars
-  
-  let password = ""
-  for (let i = 0; i < length; i++) {
-    const randomIndex = Math.floor(Math.random() * validChars.length)
-    password += validChars[randomIndex]
-  }
-  
-  return password
-}
-
-/**
- * Calculate password strength score (0-100)
- * @param password Password to evaluate
- * @returns Strength score from a scale of 0-100
- */
-export function getPasswordStrength(password: string): number {
-  if (!password) return 0
-  
-  const length = password.length
-  let score = 0
-  
-  // Basic length check
-  score += Math.min(length * 4, 40)
-  
-  // Character variety checks
-  if (/[a-z]/.test(password)) score += 10
-  if (/[A-Z]/.test(password)) score += 15
-  if (/[0-9]/.test(password)) score += 10
-  if (/[^A-Za-z0-9]/.test(password)) score += 15
-  
-  // Repeating character penalty
-  const repeats = password.match(/(.)\1+/g)
-  if (repeats) {
-    score -= repeats.reduce((p, c) => p + c.length, 0)
-  }
-  
-  // Common pattern penalty
-  if (/^(123|abc|qwerty|password|admin)/i.test(password)) {
-    score -= 15
-  }
-  
-  // Ensure score is within 0-100 range
-  return Math.max(0, Math.min(100, score))
-}
-
-/**
- * Get a descriptive label for password strength
- * @param score Password strength score (0-100)
- * @returns Text label describing the strength
- */
-export function getPasswordStrengthLabel(score: number): string {
-  if (score < 20) return "Very Weak"
-  if (score < 40) return "Weak"
-  if (score < 60) return "Moderate"
-  if (score < 80) return "Strong"
-  return "Very Strong"
+  return text.substring(0, maxLength) + '...'
 }

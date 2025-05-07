@@ -1,10 +1,9 @@
-import { createContext, useContext } from "react"
-import { Instance, SnapshotOut, types } from "mobx-state-tree"
-import { RootStoreModel } from "./root-store"
-import DEFAULT_ENVIRONMENT from "../services/environment"
-
-export interface RootStore extends Instance<typeof RootStoreModel> {}
-export interface RootStoreSnapshot extends SnapshotOut<typeof RootStoreModel> {}
+/**
+ * Export models from a single place
+ */
+import { createContext, useContext } from 'react'
+import { DEFAULT_ENVIRONMENT } from '../services/environment'
+import { RootStore, RootStoreModel } from './root-store'
 
 let _rootStore: RootStore
 
@@ -14,26 +13,12 @@ let _rootStore: RootStore
  * @returns The root store
  */
 export function setupRootStore(rootStore?: RootStore) {
-  // If there is a root store provided, use it
-  if (rootStore) {
-    _rootStore = rootStore
-    return _rootStore
-  }
+  // Create the root store
+  _rootStore = rootStore || RootStoreModel.create({})
 
-  // If there is already a root store, use it
-  if (_rootStore) return _rootStore
-
-  // Otherwise create a new one
-  _rootStore = RootStoreModel.create(
-    {},
-    {
-      rootStore: {} as any,
-      environment: DEFAULT_ENVIRONMENT
-    }
-  )
-
-  // Track changes & save to AsyncStorage when appropriate
-  // onSnapshot(_rootStore, snapshot => console.log("Snapshot: ", snapshot))
+  // Set the environment for the stores
+  _rootStore.authStore.environment = DEFAULT_ENVIRONMENT
+  _rootStore.credentialStore.environment = DEFAULT_ENVIRONMENT
 
   return _rootStore
 }
@@ -43,10 +28,31 @@ export function setupRootStore(rootStore?: RootStore) {
  * @returns The root store
  */
 export function getRootStore(): RootStore {
+  if (!_rootStore) {
+    _rootStore = setupRootStore()
+  }
+
   return _rootStore
 }
 
-// Create a React Context with the RootStore instance.
+/**
+ * The RootStoreContext provides a way to access
+ * the RootStore instance from any component
+ */
 export const RootStoreContext = createContext<RootStore>({} as RootStore)
+
+/**
+ * Provides the root store to any component that needs it
+ */
 export const RootStoreProvider = RootStoreContext.Provider
+
+/**
+ * A hook that screens can use to gain access to our stores
+ */
 export const useRootStore = () => useContext(RootStoreContext)
+
+// Export models and stores
+export * from './root-store'
+export * from './auth-store'
+export * from './credential-store'
+export * from './credential'

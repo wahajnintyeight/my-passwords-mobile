@@ -3,7 +3,6 @@
  */
 import { types, Instance, SnapshotOut } from 'mobx-state-tree'
 import { generateId } from '../utils/encryption'
-import Config from '../config'
 
 /**
  * Credential model
@@ -16,11 +15,13 @@ export const CredentialModel = types
     website: types.string,
     username: types.string,
     password: types.string,
-    notes: types.maybeNull(types.string),
-    category: types.optional(types.string, Config.credential.defaultCategory),
+    notes: types.optional(types.string, ''),
+    category: types.optional(types.string, 'Uncategorized'),
     favorite: types.optional(types.boolean, false),
-    createdAt: types.optional(types.string, () => new Date().toISOString()),
-    updatedAt: types.optional(types.string, () => new Date().toISOString()),
+    lastUsed: types.optional(types.string, ''),
+    createdAt: types.string,
+    updatedAt: types.string,
+    icon: types.optional(types.string, ''),
     tags: types.optional(types.array(types.string), []),
   })
   .views(self => ({
@@ -31,27 +32,28 @@ export const CredentialModel = types
       try {
         if (!self.website) return ''
         
-        // If it doesn't have http://, add it
+        // Add protocol if missing
         let url = self.website
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        if (!/^https?:\/\//i.test(url)) {
           url = 'https://' + url
         }
         
-        const parsedUrl = new URL(url)
-        // Get domain without subdomain
-        const hostParts = parsedUrl.hostname.split('.')
+        const urlObj = new URL(url)
+        const hostParts = urlObj.hostname.split('.')
         
-        // Handle cases like co.uk, com.au, etc.
-        if (hostParts.length > 2 && 
-            ((hostParts[hostParts.length - 2].length <= 3 && hostParts[hostParts.length - 1].length <= 3) ||
-             hostParts[hostParts.length - 1] === 'localhost')) {
-          return hostParts.slice(-3).join('.')
+        // Handle special cases like co.uk, com.au
+        if (hostParts.length > 2) {
+          const lastTwoParts = hostParts.slice(-2).join('.')
+          if (['co.uk', 'com.au', 'co.jp', 'co.nz', 'org.uk'].includes(lastTwoParts)) {
+            return hostParts.slice(-3).join('.')
+          }
         }
         
-        return hostParts.slice(-2).join('.')
+        // Return domain without 'www'
+        return urlObj.hostname.replace(/^www\./i, '')
       } catch (error) {
-        // If URL parsing fails, just return the website as is or empty string
-        return self.website || ''
+        // Return original website if parsing fails
+        return self.website
       }
     },
     
@@ -61,38 +63,33 @@ export const CredentialModel = types
     matchesSearch(term: string): boolean {
       if (!term) return true
       
-      const searchTerm = term.toLowerCase()
-      return (
-        self.title.toLowerCase().includes(searchTerm) ||
-        self.username.toLowerCase().includes(searchTerm) ||
-        self.website.toLowerCase().includes(searchTerm) ||
-        (self.notes && self.notes.toLowerCase().includes(searchTerm)) ||
-        self.domain.toLowerCase().includes(searchTerm) ||
-        self.category.toLowerCase().includes(searchTerm) ||
-        self.tags.some(tag => tag.toLowerCase().includes(searchTerm))
-      )
-    }
+      const lowerTerm = term.toLowerCase()
+      
+      // Check title, website, username, notes, category
+      if (self.title.toLowerCase().includes(lowerTerm)) return true
+      if (self.website.toLowerCase().includes(lowerTerm)) return true
+      if (self.username.toLowerCase().includes(lowerTerm)) return true
+      if (self.notes.toLowerCase().includes(lowerTerm)) return true
+      if (self.category.toLowerCase().includes(lowerTerm)) return true
+      
+      // Check domain
+      if (self.domain.toLowerCase().includes(lowerTerm)) return true
+      
+      // Check tags
+      if (self.tags.some(tag => tag.toLowerCase().includes(lowerTerm))) return true
+      
+      return false
+    },
   }))
   .actions(self => ({
     /**
      * Update credential properties
      */
     update(newData: Partial<typeof self>): void {
-      Object.keys(newData).forEach(key => {
-        // Skip id to prevent changing it
-        if (key === 'id') return
-        
-        // Handle special cases like tags that need reference copying
-        if (key === 'tags' && Array.isArray(newData.tags)) {
-          self.tags.replace(newData.tags)
-        } else if (key in self) {
-          // @ts-ignore - ignoring to avoid having to type every property
-          self[key] = newData[key]
-        }
+      Object.assign(self, {
+        ...newData,
+        updatedAt: new Date().toISOString(),
       })
-      
-      // Update the updatedAt timestamp
-      self.updatedAt = new Date().toISOString()
     },
     
     /**
@@ -118,7 +115,7 @@ export const CredentialModel = types
      */
     removeTag(tag: string): void {
       const index = self.tags.indexOf(tag)
-      if (index >= 0) {
+      if (index !== -1) {
         self.tags.splice(index, 1)
         self.updatedAt = new Date().toISOString()
       }
@@ -128,17 +125,16 @@ export const CredentialModel = types
      * Set category
      */
     setCategory(category: string): void {
-      if (category) {
-        self.category = category
-        self.updatedAt = new Date().toISOString()
-      }
-    }
+      self.category = category
+      self.updatedAt = new Date().toISOString()
+    },
   }))
 
 /**
  * Generate default values for a new credential
  */
 export const createCredentialDefaults = () => {
+  const now = new Date().toISOString()
   return {
     id: generateId(),
     title: '',
@@ -146,11 +142,13 @@ export const createCredentialDefaults = () => {
     username: '',
     password: '',
     notes: '',
-    category: Config.credential.defaultCategory,
+    category: 'Uncategorized',
     favorite: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    tags: []
+    lastUsed: '',
+    createdAt: now,
+    updatedAt: now,
+    icon: '',
+    tags: [],
   }
 }
 

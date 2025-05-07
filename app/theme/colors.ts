@@ -1,162 +1,257 @@
 /**
- * Color palette for the app
+ * Color definitions for light and dark themes
  */
 
 /**
- * Primary palette - main brand colors
+ * Base color palette
  */
 export const palette = {
   // Primary brand colors
-  primary: "#4A6FA5",
-  primaryDark: "#395782",
-  primaryLight: "#6989B9",
-  primaryLighter: "#EBF0F9",
+  purple: {
+    lightest: '#EBE5FD',
+    lighter: '#D1C2FC',
+    light: '#B79EFA',
+    base: '#9370F5',
+    dark: '#7045F2',
+    darker: '#5C2BD6',
+    darkest: '#461CAE',
+  },
   
-  // Secondary & accent colors
-  secondary: "#FF6B6B",
-  secondaryDark: "#E05959",
-  secondaryLight: "#FF8A8A",
+  // Secondary brand colors
+  teal: {
+    lightest: '#DEF7F6',
+    lighter: '#BFF1ED',
+    light: '#91E5DF',
+    base: '#5ED2C8',
+    dark: '#3DB5AC',
+    darker: '#2E8A83',
+    darkest: '#1F5D58',
+  },
   
-  // Success, warning, error colors
-  success: "#4CAF50",
-  successDark: "#388E3C",
-  successLight: "#81C784",
+  // Accent colors
+  coral: {
+    lightest: '#FEE9E8',
+    lighter: '#FCBFBC',
+    light: '#FA9590',
+    base: '#F56B63',
+    dark: '#E54037',
+    darker: '#C2221A',
+    darkest: '#921914',
+  },
   
-  warning: "#FFC107",
-  warningDark: "#FFA000",
-  warningLight: "#FFD54F",
+  // Neutrals (grayscale)
+  gray: {
+    white: '#FFFFFF',
+    lightest: '#F7F7F7',
+    lighter: '#EEEEEE',
+    light: '#DDDDDD',
+    base: '#CCCCCC',
+    medium: '#999999',
+    dark: '#666666',
+    darker: '#444444',
+    darkest: '#222222',
+    black: '#000000',
+  },
   
-  error: "#F44336",
-  errorDark: "#D32F2F",
-  errorLight: "#E57373",
+  // Semantic colors
+  success: {
+    lightest: '#E3F9E5',
+    lighter: '#C1EAC5',
+    light: '#91D5A8',
+    base: '#51B96A',
+    dark: '#1F9A48',
+    darker: '#0A7533',
+    darkest: '#05522A',
+  },
   
-  // Neutral colors
-  neutral100: "#FFFFFF",
-  neutral200: "#F7F9FC",
-  neutral300: "#EDF1F7",
-  neutral400: "#C5CEE0",
-  neutral500: "#8F9BB3",
-  neutral600: "#55627C",
-  neutral700: "#2E3A59",
-  neutral800: "#1A2138",
-  neutral900: "#101426",
+  warning: {
+    lightest: '#FFF8E0',
+    lighter: '#FEECB0',
+    light: '#FFD747',
+    base: '#FFBD2E',
+    dark: '#E5A100',
+    darker: '#AB7800',
+    darkest: '#704D00',
+  },
+  
+  error: {
+    lightest: '#FFEBEE',
+    lighter: '#FFCDD2',
+    light: '#EF9A9A',
+    base: '#F44336',
+    dark: '#D32F2F',
+    darker: '#B71C1C',
+    darkest: '#7F0000',
+  },
+  
+  info: {
+    lightest: '#E3F2FD',
+    lighter: '#BBDEFB',
+    light: '#90CAF9',
+    base: '#2196F3',
+    dark: '#1976D2',
+    darker: '#0D47A1',
+    darkest: '#0A3875',
+  },
+  
+  // Miscellaneous
+  transparent: 'transparent',
 }
 
 /**
- * Semantic colors for light theme
- */
-export const lightThemeColors = {
-  // Background colors
-  background: palette.neutral100,
-  backgroundAlt: palette.neutral200,
-  card: palette.neutral100,
-  surface: palette.neutral100,
-  surfaceAlt: palette.neutral200,
-  
-  // Text colors
-  text: palette.neutral800,
-  textDim: palette.neutral600,
-  textLight: palette.neutral500,
-  textInverted: palette.neutral100,
-  link: palette.primary,
-  
-  // Border colors
-  border: palette.neutral300,
-  borderLight: palette.neutral200,
-  divider: palette.neutral300,
-  
-  // Interactive elements
-  focus: palette.primaryLight,
-  hover: palette.primaryLighter,
-  pressed: palette.primaryDark,
-  disabled: palette.neutral400,
-  
-  // Status colors
-  success: palette.success,
-  error: palette.error,
-  warning: palette.warning,
-  info: palette.primary,
-  
-  // Brand colors
-  primary: palette.primary,
-  primaryDark: palette.primaryDark,
-  primaryLight: palette.primaryLight,
-  secondary: palette.secondary,
-  
-  // Component specific
-  tabBar: palette.neutral100,
-  tabBarInactive: palette.neutral500,
-  tabBarActive: palette.primary,
-  
-  // Overlay
-  overlay: "rgba(0, 0, 0, 0.5)",
-  backdrop: "rgba(0, 0, 0, 0.3)",
-  shadow: "rgba(0, 0, 0, 0.1)",
-}
-
-/**
- * Semantic colors for dark theme
- */
-export const darkThemeColors = {
-  // Background colors
-  background: palette.neutral900,
-  backgroundAlt: palette.neutral800,
-  card: palette.neutral800,
-  surface: palette.neutral800,
-  surfaceAlt: palette.neutral700,
-  
-  // Text colors
-  text: palette.neutral100,
-  textDim: palette.neutral300,
-  textLight: palette.neutral400,
-  textInverted: palette.neutral800,
-  link: palette.primaryLight,
-  
-  // Border colors
-  border: palette.neutral700,
-  borderLight: palette.neutral600,
-  divider: palette.neutral700,
-  
-  // Interactive elements
-  focus: palette.primaryLight,
-  hover: "rgba(74, 111, 165, 0.2)", // primary with opacity
-  pressed: palette.primaryDark,
-  disabled: palette.neutral600,
-  
-  // Status colors
-  success: palette.successLight,
-  error: palette.errorLight,
-  warning: palette.warningLight,
-  info: palette.primaryLight,
-  
-  // Brand colors
-  primary: palette.primaryLight,
-  primaryDark: palette.primary,
-  primaryLight: palette.primaryLight,
-  secondary: palette.secondaryLight,
-  
-  // Component specific
-  tabBar: palette.neutral800,
-  tabBarInactive: palette.neutral500,
-  tabBarActive: palette.primaryLight,
-  
-  // Overlay
-  overlay: "rgba(0, 0, 0, 0.7)",
-  backdrop: "rgba(0, 0, 0, 0.5)",
-  shadow: "rgba(0, 0, 0, 0.3)",
-}
-
-/**
- * Default theme colors (light)
+ * Default color theme (light)
  */
 export const colors = {
-  ...lightThemeColors,
+  // Basics
+  transparent: palette.transparent,
   
-  // Colors specifically needed for React Navigation
-  transparent: "transparent",
-  background: lightThemeColors.background,
-  card: lightThemeColors.card,
-  text: lightThemeColors.text,
-  border: lightThemeColors.border,
-  notification: lightThemeColors.secondary,
+  // Background colors
+  background: palette.gray.white,
+  backgroundAlt: palette.gray.lightest,
+  
+  // Surface colors (cards, tiles, etc.)
+  surface: palette.gray.white,
+  surfaceAlt: palette.gray.lightest,
+  
+  // Text colors
+  text: palette.gray.darkest,
+  textDim: palette.gray.dark,
+  textLight: palette.gray.medium,
+  
+  // Border colors
+  border: palette.gray.light,
+  borderDark: palette.gray.base,
+  
+  // Primary colors
+  primary: palette.purple.base,
+  primaryDark: palette.purple.dark,
+  primaryLight: palette.purple.light,
+  primaryBackground: palette.purple.lightest,
+  
+  // Secondary colors
+  secondary: palette.teal.base,
+  secondaryDark: palette.teal.dark,
+  secondaryLight: palette.teal.light,
+  secondaryBackground: palette.teal.lightest,
+  
+  // Accent colors
+  accent: palette.coral.base,
+  accentDark: palette.coral.dark,
+  accentLight: palette.coral.light,
+  accentBackground: palette.coral.lightest,
+  
+  // Status colors
+  success: palette.success.base,
+  successLight: palette.success.light,
+  successBackground: palette.success.lightest,
+  
+  warning: palette.warning.base,
+  warningLight: palette.warning.light,
+  warningBackground: palette.warning.lightest,
+  
+  error: palette.error.base,
+  errorLight: palette.error.light,
+  errorBackground: palette.error.lightest,
+  
+  info: palette.info.base,
+  infoLight: palette.info.light,
+  infoBackground: palette.info.lightest,
+  
+  // Specific UI elements
+  card: palette.gray.white,
+  separator: palette.gray.lighter,
+  placeholder: palette.gray.light,
+  backdrop: 'rgba(0, 0, 0, 0.5)',
+  shadow: palette.gray.darkest,
+  
+  // White/black
+  white: palette.gray.white,
+  black: palette.gray.black,
+  
+  // Additional UI colors
+  navbar: palette.purple.base,
+  navbarText: palette.gray.white,
+  statusBar: palette.purple.dark,
+  tabBar: palette.gray.white,
+  tabBarActive: palette.purple.base,
+  tabBarInactive: palette.gray.medium,
+}
+
+/**
+ * Light theme colors
+ */
+export const lightThemeColors = { ...colors }
+
+/**
+ * Dark theme colors
+ */
+export const darkThemeColors = {
+  ...colors,
+  
+  // Background colors
+  background: palette.gray.darkest,
+  backgroundAlt: '#1A1A1A',
+  
+  // Surface colors
+  surface: '#2C2C2C',
+  surfaceAlt: '#353535',
+  
+  // Text colors
+  text: palette.gray.white,
+  textDim: palette.gray.lighter,
+  textLight: palette.gray.light,
+  
+  // Border colors
+  border: palette.gray.darker,
+  borderDark: palette.gray.dark,
+  
+  // Primary colors (slightly adjusted for dark theme)
+  primary: palette.purple.light,
+  primaryDark: palette.purple.base,
+  primaryLight: palette.purple.lighter,
+  primaryBackground: 'rgba(147, 112, 245, 0.15)',
+  
+  // Secondary colors
+  secondary: palette.teal.light,
+  secondaryDark: palette.teal.base,
+  secondaryLight: palette.teal.lighter,
+  secondaryBackground: 'rgba(94, 210, 200, 0.15)',
+  
+  // Accent colors
+  accent: palette.coral.light,
+  accentDark: palette.coral.base,
+  accentLight: palette.coral.lighter,
+  accentBackground: 'rgba(245, 107, 99, 0.15)',
+  
+  // Status colors (adjusted for better visibility in dark mode)
+  success: palette.success.light,
+  successLight: palette.success.lighter,
+  successBackground: 'rgba(81, 185, 106, 0.15)',
+  
+  warning: palette.warning.light,
+  warningLight: palette.warning.lighter,
+  warningBackground: 'rgba(255, 189, 46, 0.15)',
+  
+  error: palette.error.light,
+  errorLight: palette.error.lighter,
+  errorBackground: 'rgba(244, 67, 54, 0.15)',
+  
+  info: palette.info.light,
+  infoLight: palette.info.lighter,
+  infoBackground: 'rgba(33, 150, 243, 0.15)',
+  
+  // Specific UI elements
+  card: '#2C2C2C',
+  separator: palette.gray.darker,
+  placeholder: palette.gray.dark,
+  backdrop: 'rgba(0, 0, 0, 0.7)',
+  shadow: palette.gray.black,
+  
+  // Additional UI colors
+  navbar: '#2C2C2C',
+  navbarText: palette.gray.white,
+  statusBar: palette.gray.black,
+  tabBar: '#2C2C2C',
+  tabBarActive: palette.purple.light,
+  tabBarInactive: palette.gray.medium,
 }

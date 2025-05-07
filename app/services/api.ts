@@ -1,288 +1,300 @@
 /**
- * API service for communicating with the backend
+ * API service for interacting with the backend
  */
-import { create } from 'apisauce'
+import { create, ApisauceInstance, ApiResponse } from 'apisauce'
+import { loadFromStorage, saveToStorage } from '../utils/storage-helpers'
 import Config from '../config'
-import { saveToStorage, loadFromStorage } from '../utils/storage-helpers'
-
-// Session storage keys
-const SESSION_ID_KEY = `${Config.storage.prefix}session_id`
-
-// Create the API instance
-const api = create({
-  baseURL: Config.api.url,
-  timeout: Config.api.timeout,
-  headers: {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
-  },
-})
 
 /**
- * Setup API request/response transformers and interceptors
+ * Storage keys
  */
-export const setupAPI = async () => {
-  // Try to load session from storage on startup
-  const sessionId = await loadFromStorage(SESSION_ID_KEY)
-  if (sessionId) {
-    api.setHeader('sessionId', sessionId)
+const API_SESSION_KEY = 'secureVault_apiSession'
+
+/**
+ * Response types
+ */
+export interface ApiResult<T> {
+  ok: boolean
+  status: number
+  data?: T
+  problem?: string
+  originalError?: any
+}
+
+/**
+ * API service
+ */
+class ApiService {
+  /**
+   * The apisauce instance
+   */
+  api: ApisauceInstance
+
+  /**
+   * Session ID from server
+   */
+  sessionId: string | null = null
+
+  /**
+   * Set up the API
+   */
+  constructor() {
+    this.api = create({
+      baseURL: Config.api.url,
+      timeout: Config.api.timeout,
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+    })
+
+    // Auto-load session if available
+    this.loadSession()
   }
 
-  // Add request transformer
-  api.addRequestTransform(request => {
-    console.log('API Request:', request.url, request.method, request.data)
-  })
+  /**
+   * Load session from storage
+   */
+  async loadSession(): Promise<boolean> {
+    try {
+      const session = await loadFromStorage(API_SESSION_KEY)
+      if (session && session.sessionId) {
+        this.sessionId = session.sessionId
+        
+        // Set session header for all future requests
+        this.api.setHeader('X-Session-ID', this.sessionId)
+        return true
+      }
+      return false
+    } catch (error) {
+      console.error('Error loading session:', error)
+      return false
+    }
+  }
 
-  // Add response transformer
-  api.addResponseTransform(response => {
-    console.log('API Response:', response.status, response.data)
-    
-    // Handle expired session
-    if (response.status === 401) {
-      // Clear session data if unauthorized
-      clearSession()
+  /**
+   * Create a new session
+   */
+  async createSession(): Promise<ApiResult<{ sessionId: string }>> {
+    try {
+      const response: ApiResponse<any> = await this.api.put('/createSession', {})
+      
+      if (response.ok && response.data && response.data.sessionId) {
+        // Save session
+        this.sessionId = response.data.sessionId
+        await saveToStorage(API_SESSION_KEY, { sessionId: this.sessionId })
+        
+        // Set session header for all future requests
+        this.api.setHeader('X-Session-ID', this.sessionId)
+      }
+      
+      return {
+        ok: response.ok,
+        status: response.status || 0,
+        data: response.data,
+        problem: response.problem,
+        originalError: response.originalError,
+      }
+    } catch (error) {
+      console.error('Error creating session:', error)
+      return {
+        ok: false,
+        status: 0,
+        problem: 'NETWORK_ERROR',
+        originalError: error,
+      }
     }
-  })
-}
+  }
 
-/**
- * Create a new API session
- * @param credentials User login credentials
- * @returns Promise with session data or error
- */
-export const createSession = async (credentials: { email: string; password?: string; googleToken?: string }) => {
-  try {
-    const response = await api.put('/createSession', credentials)
-    
-    if (response.ok && response.data?.sessionId) {
-      // Set session header for all future requests
-      await setSession(response.data.sessionId)
-      return { success: true, data: response.data }
+  /**
+   * Ensure session is valid, create new if needed
+   */
+  async ensureSession(): Promise<boolean> {
+    try {
+      // Check if we have a session
+      if (!this.sessionId) {
+        // Try to load from storage
+        const loadResult = await this.loadSession()
+        
+        // If still no session, create a new one
+        if (!loadResult) {
+          const createResult = await this.createSession()
+          return createResult.ok
+        }
+      }
+      
+      return true
+    } catch (error) {
+      console.error('Error ensuring session:', error)
+      return false
     }
-    
-    return { 
-      success: false, 
-      error: response.data?.error || 'Failed to create session'
+  }
+
+  /**
+   * Authenticate with the API using credentials
+   */
+  async login(email: string, password: string): Promise<ApiResult<any>> {
+    try {
+      // Ensure we have a session
+      await this.ensureSession()
+      
+      // Make login request
+      const response: ApiResponse<any> = await this.api.post('/auth/login', {
+        email,
+        password,
+      })
+      
+      return {
+        ok: response.ok,
+        status: response.status || 0,
+        data: response.data,
+        problem: response.problem,
+        originalError: response.originalError,
+      }
+    } catch (error) {
+      console.error('Error during login:', error)
+      return {
+        ok: false,
+        status: 0,
+        problem: 'NETWORK_ERROR',
+        originalError: error,
+      }
     }
-  } catch (error) {
-    console.error('API error creating session:', error)
-    return { 
-      success: false, 
-      error: 'Network error creating session' 
+  }
+
+  /**
+   * Authenticate with the API using Google token
+   */
+  async loginWithGoogle(token: string): Promise<ApiResult<any>> {
+    try {
+      // Ensure we have a session
+      await this.ensureSession()
+      
+      // Make Google login request
+      const response: ApiResponse<any> = await this.api.post('/auth/google', {
+        token,
+      })
+      
+      return {
+        ok: response.ok,
+        status: response.status || 0,
+        data: response.data,
+        problem: response.problem,
+        originalError: response.originalError,
+      }
+    } catch (error) {
+      console.error('Error during Google login:', error)
+      return {
+        ok: false,
+        status: 0,
+        problem: 'NETWORK_ERROR',
+        originalError: error,
+      }
+    }
+  }
+
+  /**
+   * Logout from the API
+   */
+  async logout(): Promise<ApiResult<any>> {
+    try {
+      // Ensure we have a session
+      await this.ensureSession()
+      
+      // Make logout request
+      const response: ApiResponse<any> = await this.api.post('/auth/logout', {})
+      
+      // Clear session
+      this.sessionId = null
+      this.api.deleteHeader('X-Session-ID')
+      await saveToStorage(API_SESSION_KEY, null)
+      
+      return {
+        ok: response.ok || true, // Consider logout successful even if API fails
+        status: response.status || 0,
+        data: response.data,
+        problem: response.problem,
+        originalError: response.originalError,
+      }
+    } catch (error) {
+      console.error('Error during logout:', error)
+      
+      // Clear session anyway
+      this.sessionId = null
+      this.api.deleteHeader('X-Session-ID')
+      await saveToStorage(API_SESSION_KEY, null)
+      
+      return {
+        ok: true, // Consider logout successful even if API fails
+        status: 0,
+        problem: 'NETWORK_ERROR',
+        originalError: error,
+      }
+    }
+  }
+
+  /**
+   * Sync credentials with the server
+   */
+  async syncCredentials(credentials: any[], lastSync: string): Promise<ApiResult<any>> {
+    try {
+      // Ensure we have a session
+      await this.ensureSession()
+      
+      // Make sync request
+      const response: ApiResponse<any> = await this.api.post('/credentials/sync', {
+        credentials,
+        lastSync,
+      })
+      
+      return {
+        ok: response.ok,
+        status: response.status || 0,
+        data: response.data,
+        problem: response.problem,
+        originalError: response.originalError,
+      }
+    } catch (error) {
+      console.error('Error syncing credentials:', error)
+      return {
+        ok: false,
+        status: 0,
+        problem: 'NETWORK_ERROR',
+        originalError: error,
+      }
+    }
+  }
+
+  /**
+   * Process OCR scan image
+   */
+  async processOcrImage(imageBase64: string): Promise<ApiResult<any>> {
+    try {
+      // Ensure we have a session
+      await this.ensureSession()
+      
+      // Make OCR request
+      const response: ApiResponse<any> = await this.api.post('/ocr/process', {
+        image: imageBase64,
+      })
+      
+      return {
+        ok: response.ok,
+        status: response.status || 0,
+        data: response.data,
+        problem: response.problem,
+        originalError: response.originalError,
+      }
+    } catch (error) {
+      console.error('Error processing OCR image:', error)
+      return {
+        ok: false,
+        status: 0,
+        problem: 'NETWORK_ERROR',
+        originalError: error,
+      }
     }
   }
 }
 
-/**
- * Set session ID in storage and headers
- * @param sessionId Session ID from API
- */
-export const setSession = async (sessionId: string) => {
-  if (sessionId) {
-    await saveToStorage(SESSION_ID_KEY, sessionId)
-    api.setHeader('sessionId', sessionId)
-  }
-}
-
-/**
- * Clear session data
- */
-export const clearSession = async () => {
-  await saveToStorage(SESSION_ID_KEY, null)
-  api.deleteHeader('sessionId')
-}
-
-/**
- * Get user profile
- * @returns Promise with user data
- */
-export const getUserProfile = async () => {
-  try {
-    const response = await api.get('/user/profile')
-    
-    if (response.ok) {
-      return { success: true, data: response.data }
-    }
-    
-    return { 
-      success: false, 
-      error: response.data?.error || 'Failed to get user profile'
-    }
-  } catch (error) {
-    console.error('API error getting profile:', error)
-    return { 
-      success: false, 
-      error: 'Network error getting user profile' 
-    }
-  }
-}
-
-/**
- * Get all user credentials
- * @returns Promise with credentials
- */
-export const getCredentials = async () => {
-  try {
-    const response = await api.get('/credentials')
-    
-    if (response.ok) {
-      return { success: true, data: response.data }
-    }
-    
-    return { 
-      success: false, 
-      error: response.data?.error || 'Failed to get credentials'
-    }
-  } catch (error) {
-    console.error('API error getting credentials:', error)
-    return { 
-      success: false, 
-      error: 'Network error getting credentials' 
-    }
-  }
-}
-
-/**
- * Save a credential
- * @param credential Credential data
- * @returns Promise with result
- */
-export const saveCredential = async (credential: any) => {
-  try {
-    const response = await api.post('/credentials', credential)
-    
-    if (response.ok) {
-      return { success: true, data: response.data }
-    }
-    
-    return { 
-      success: false, 
-      error: response.data?.error || 'Failed to save credential'
-    }
-  } catch (error) {
-    console.error('API error saving credential:', error)
-    return { 
-      success: false, 
-      error: 'Network error saving credential' 
-    }
-  }
-}
-
-/**
- * Update a credential
- * @param id Credential ID
- * @param credential Updated credential data
- * @returns Promise with result
- */
-export const updateCredential = async (id: string, credential: any) => {
-  try {
-    const response = await api.put(`/credentials/${id}`, credential)
-    
-    if (response.ok) {
-      return { success: true, data: response.data }
-    }
-    
-    return { 
-      success: false, 
-      error: response.data?.error || 'Failed to update credential'
-    }
-  } catch (error) {
-    console.error('API error updating credential:', error)
-    return { 
-      success: false, 
-      error: 'Network error updating credential' 
-    }
-  }
-}
-
-/**
- * Delete a credential
- * @param id Credential ID
- * @returns Promise with result
- */
-export const deleteCredential = async (id: string) => {
-  try {
-    const response = await api.delete(`/credentials/${id}`)
-    
-    if (response.ok) {
-      return { success: true, data: response.data }
-    }
-    
-    return { 
-      success: false, 
-      error: response.data?.error || 'Failed to delete credential'
-    }
-  } catch (error) {
-    console.error('API error deleting credential:', error)
-    return { 
-      success: false, 
-      error: 'Network error deleting credential' 
-    }
-  }
-}
-
-/**
- * Export credentials for backup
- * @returns Promise with exported data
- */
-export const exportCredentials = async () => {
-  try {
-    const response = await api.get('/credentials/export')
-    
-    if (response.ok) {
-      return { success: true, data: response.data }
-    }
-    
-    return { 
-      success: false, 
-      error: response.data?.error || 'Failed to export credentials'
-    }
-  } catch (error) {
-    console.error('API error exporting credentials:', error)
-    return { 
-      success: false, 
-      error: 'Network error exporting credentials' 
-    }
-  }
-}
-
-/**
- * Import credentials from backup
- * @param data Credential data to import
- * @returns Promise with result
- */
-export const importCredentials = async (data: any) => {
-  try {
-    const response = await api.post('/credentials/import', data)
-    
-    if (response.ok) {
-      return { success: true, data: response.data }
-    }
-    
-    return { 
-      success: false, 
-      error: response.data?.error || 'Failed to import credentials'
-    }
-  } catch (error) {
-    console.error('API error importing credentials:', error)
-    return { 
-      success: false, 
-      error: 'Network error importing credentials' 
-    }
-  }
-}
-
-export default {
-  api,
-  setupAPI,
-  createSession,
-  setSession,
-  clearSession,
-  getUserProfile,
-  getCredentials,
-  saveCredential,
-  updateCredential,
-  deleteCredential,
-  exportCredentials,
-  importCredentials
-}
+export const api = new ApiService()
