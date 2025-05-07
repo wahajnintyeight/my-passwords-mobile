@@ -2,123 +2,94 @@
  * The home screen shows the list of saved passwords and credentials
  * with search, filter, and action buttons
  */
-import React, { FC, useEffect, useState } from "react"
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from "react-native"
-import { observer } from "mobx-react-lite"
+import React, { useState } from "react"
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, SafeAreaView } from "react-native"
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
 import { AppStackParamList } from "../navigators/app-navigator"
-import { CredentialItem } from "../components/credential-item"
-import { ScanButton } from "../components/scan-button"
-import { Feather } from "@expo/vector-icons"
-import { useStores } from "../models"
-import { colors, spacing, typography } from "../theme"
-import { Credential } from "../models/credential"
-import { SafeAreaView } from "react-native-safe-area-context"
+import { colors, spacing } from "../theme"
+import { observer } from "mobx-react-lite"
+import { useRootStore } from "../models"
+import { Ionicons } from "@expo/vector-icons"
 
 export const HomeScreen: FC<NativeStackScreenProps<AppStackParamList, "Main">> = observer(
   ({ navigation }) => {
-    const { credentialStore, authStore } = useStores()
+    const { credentialStore } = useRootStore()
     const [searchQuery, setSearchQuery] = useState("")
-    const [filteredCredentials, setFilteredCredentials] = useState<Credential[]>([])
 
-    useEffect(() => {
-      credentialStore.loadCredentials()
-    }, [])
-
-    useEffect(() => {
-      if (searchQuery.trim() === "") {
-        setFilteredCredentials(credentialStore.credentials)
-      } else {
-        const filtered = credentialStore.credentials.filter(
-          (cred) =>
-            cred.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            cred.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            cred.website.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-        setFilteredCredentials(filtered)
-      }
-    }, [searchQuery, credentialStore.credentials])
-
-    const handleAddCredential = () => {
-      navigation.navigate("AddCredential")
-    }
-
-    const handleScan = () => {
-      navigation.navigate("Scan")
-    }
-
-    const handleImportExport = () => {
-      navigation.navigate("ImportExport")
-    }
-
-    const handleCredentialPress = (id: string) => {
-      navigation.navigate("CredentialDetail", { id })
-    }
+    // Filter credentials based on search query
+    const filteredCredentials = credentialStore.credentials.filter((credential) =>
+      credential.matchesSearch(searchQuery)
+    )
 
     const renderEmptyState = () => (
       <View style={styles.emptyContainer}>
-        <Feather name="lock" size={50} color={colors.textDim} />
-        <Text style={styles.emptyTitle}>No passwords yet</Text>
+        <Ionicons name="key-outline" size={64} color={colors.lightGrey} />
+        <Text style={styles.emptyTitle}>No credentials yet</Text>
         <Text style={styles.emptySubtitle}>
-          Add your first password by tapping the + button or scan a login page
+          Add your first password by tapping the + button below
         </Text>
       </View>
     )
 
+    const renderCredentialItem = ({ item }) => (
+      <TouchableOpacity
+        style={styles.credentialItem}
+        onPress={() => navigation.navigate("CredentialDetail", { id: item.id })}
+      >
+        <View style={styles.credentialIcon}>
+          <Text style={styles.iconText}>{item.website.charAt(0).toUpperCase()}</Text>
+        </View>
+        <View style={styles.credentialInfo}>
+          <Text style={styles.credentialTitle}>{item.title}</Text>
+          <Text style={styles.credentialSubtitle}>{item.username}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={colors.lightGrey} />
+      </TouchableOpacity>
+    )
+
     return (
-      <SafeAreaView style={styles.safeArea} edges={["bottom", "left", "right"]}>
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <View style={styles.searchContainer}>
-              <Feather name="search" size={18} color={colors.textDim} style={styles.searchIcon} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search passwords..."
-                placeholderTextColor={colors.textDim}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery("")}>
-                  <Feather name="x" size={18} color={colors.textDim} />
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Passwords</Text>
+        </View>
 
-          <View style={styles.syncStatus}>
-            <Feather 
-              name={authStore.isOfflineMode ? "wifi-off" : "cloud"} 
-              size={14} 
-              color={authStore.isOfflineMode ? colors.error : colors.success} 
-            />
-            <Text style={styles.syncStatusText}>
-              {authStore.isOfflineMode ? "Offline Mode" : "Synced with cloud"}
-            </Text>
-          </View>
-
-          <FlatList
-            data={filteredCredentials}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <CredentialItem
-                credential={item}
-                onPress={() => handleCredentialPress(item.id)}
-              />
-            )}
-            contentContainerStyle={styles.listContent}
-            ListEmptyComponent={renderEmptyState}
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color={colors.textDim} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search passwords..."
+            placeholderTextColor={colors.textDim}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <Ionicons name="close-circle" size={20} color={colors.textDim} />
+            </TouchableOpacity>
+          )}
+        </View>
 
-          <View style={styles.fabContainer}>
-            <TouchableOpacity style={styles.importExportButton} onPress={handleImportExport}>
-              <Feather name="upload" size={22} color={colors.white} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.addButton} onPress={handleAddCredential}>
-              <Feather name="plus" size={24} color={colors.white} />
-            </TouchableOpacity>
-            <ScanButton onPress={handleScan} />
-          </View>
+        <FlatList
+          data={filteredCredentials}
+          renderItem={renderCredentialItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={renderEmptyState}
+        />
+
+        <View style={styles.bottomActions}>
+          <TouchableOpacity
+            style={styles.fabSecondary}
+            onPress={() => navigation.navigate("Scan")}
+          >
+            <Ionicons name="camera-outline" size={24} color={colors.white} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.fab}
+            onPress={() => navigation.navigate("AddCredential")}
+          >
+            <Ionicons name="add" size={24} color={colors.white} />
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     )
@@ -126,102 +97,126 @@ export const HomeScreen: FC<NativeStackScreenProps<AppStackParamList, "Main">> =
 )
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
   container: {
     flex: 1,
     backgroundColor: colors.background,
   },
   header: {
     padding: spacing.medium,
-    backgroundColor: colors.background,
+    paddingTop: spacing.large,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: colors.text,
   },
   searchContainer: {
     flexDirection: "row",
-    backgroundColor: colors.lighterGrey,
-    borderRadius: 8,
-    padding: spacing.small,
     alignItems: "center",
+    backgroundColor: colors.lighterGrey,
+    margin: spacing.medium,
+    borderRadius: 8,
+    paddingHorizontal: spacing.medium,
   },
   searchIcon: {
-    marginRight: spacing.tiny,
-    marginLeft: spacing.tiny,
+    marginRight: spacing.small,
   },
   searchInput: {
     flex: 1,
+    height: 44,
     color: colors.text,
-    ...typography.primary.normal,
-    fontSize: 16,
-  },
-  syncStatus: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: spacing.medium,
-    paddingBottom: spacing.small,
-  },
-  syncStatusText: {
-    ...typography.primary.medium,
-    fontSize: 12,
-    color: colors.textDim,
-    marginLeft: spacing.tiny,
   },
   listContent: {
-    padding: spacing.medium,
-    paddingBottom: 80, // Provide space for FAB
+    flexGrow: 1,
+    paddingHorizontal: spacing.medium,
   },
-  emptyContainer: {
+  credentialItem: {
+    flexDirection: "row",
     alignItems: "center",
+    backgroundColor: colors.white,
+    padding: spacing.medium,
+    borderRadius: 8,
+    marginBottom: spacing.medium,
+    borderWidth: 1,
+    borderColor: colors.separator,
+  },
+  credentialIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
     justifyContent: "center",
-    padding: spacing.large,
-    marginTop: spacing.massive,
+    alignItems: "center",
+    marginRight: spacing.medium,
   },
-  emptyTitle: {
-    ...typography.primary.bold,
+  iconText: {
+    color: colors.white,
     fontSize: 18,
-    color: colors.text,
-    marginTop: spacing.medium,
+    fontWeight: "bold",
   },
-  emptySubtitle: {
-    ...typography.primary.normal,
+  credentialInfo: {
+    flex: 1,
+  },
+  credentialTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: colors.text,
+    marginBottom: 2,
+  },
+  credentialSubtitle: {
     fontSize: 14,
     color: colors.textDim,
-    textAlign: "center",
-    marginTop: spacing.small,
   },
-  fabContainer: {
+  bottomActions: {
     position: "absolute",
-    bottom: 16,
-    right: 16,
+    bottom: spacing.large,
+    right: spacing.large,
     flexDirection: "row",
     alignItems: "center",
   },
-  addButton: {
-    backgroundColor: colors.primary,
+  fab: {
     width: 56,
     height: 56,
     borderRadius: 28,
+    backgroundColor: colors.primary,
     justifyContent: "center",
     alignItems: "center",
-    elevation: 5,
+    elevation: 4,
     shadowColor: colors.shadowColor,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    marginLeft: spacing.small,
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
-  importExportButton: {
+  fabSecondary: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.secondary,
-    width: 46,
-    height: 46,
-    borderRadius: 23,
     justifyContent: "center",
     alignItems: "center",
-    elevation: 5,
+    marginRight: spacing.medium,
+    elevation: 4,
     shadowColor: colors.shadowColor,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: spacing.massive,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: colors.text,
+    marginTop: spacing.large,
+    marginBottom: spacing.small,
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    color: colors.textDim,
+    textAlign: "center",
   },
 })

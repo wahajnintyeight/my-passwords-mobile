@@ -2,6 +2,7 @@
  * Model for credential data
  */
 import { Instance, SnapshotOut, types } from "mobx-state-tree"
+import { generateId } from "../utils/encryption"
 
 /**
  * Credential model
@@ -15,33 +16,26 @@ export const CredentialModel = types
     username: types.string,
     password: types.string,
     notes: types.optional(types.string, ""),
-    createdAt: types.string,
-    updatedAt: types.maybe(types.string),
+    category: types.optional(types.string, "uncategorized"),
     favorite: types.optional(types.boolean, false),
-    category: types.optional(types.string, ""),
+    createdAt: types.optional(types.string, () => new Date().toISOString()),
+    updatedAt: types.optional(types.string, () => new Date().toISOString()),
     tags: types.optional(types.array(types.string), []),
   })
-  .views(self => ({
+  .views((self) => ({
     /**
      * Get primary domain from website URL
      */
     get domain(): string {
       try {
-        if (!self.website) return ""
-        // Try to extract domain from URL
-        let url = self.website
-        if (!url.startsWith("http")) {
-          url = "https://" + url
-        }
-        const hostname = new URL(url).hostname
-        // Remove www. prefix if present
-        return hostname.replace(/^www\./, "")
+        const url = new URL(self.website.startsWith("http") ? self.website : `https://${self.website}`)
+        return url.hostname.replace(/^www\./i, "")
       } catch (error) {
-        // If URL parsing fails, just return the original website
+        // If not a valid URL, just return the original value
         return self.website
       }
     },
-    
+
     /**
      * Check if credential contains given search term
      */
@@ -52,21 +46,20 @@ export const CredentialModel = types
         self.title.toLowerCase().includes(searchTerm) ||
         self.website.toLowerCase().includes(searchTerm) ||
         self.username.toLowerCase().includes(searchTerm) ||
-        self.notes.toLowerCase().includes(searchTerm)
+        self.notes.toLowerCase().includes(searchTerm) ||
+        self.domain.toLowerCase().includes(searchTerm) ||
+        self.tags.some((tag) => tag.toLowerCase().includes(searchTerm))
       )
-    }
+    },
   }))
-  .actions(self => ({
+  .actions((self) => ({
     /**
      * Update credential properties
      */
     update(newData: Partial<typeof self>): void {
-      Object.assign(self, {
-        ...newData,
-        updatedAt: new Date().toISOString()
-      })
+      Object.assign(self, { ...newData, updatedAt: new Date().toISOString() })
     },
-    
+
     /**
      * Toggle favorite status
      */
@@ -74,7 +67,7 @@ export const CredentialModel = types
       self.favorite = !self.favorite
       self.updatedAt = new Date().toISOString()
     },
-    
+
     /**
      * Add a tag
      */
@@ -84,7 +77,7 @@ export const CredentialModel = types
         self.updatedAt = new Date().toISOString()
       }
     },
-    
+
     /**
      * Remove a tag
      */
@@ -95,15 +88,32 @@ export const CredentialModel = types
         self.updatedAt = new Date().toISOString()
       }
     },
-    
+
     /**
      * Set category
      */
     setCategory(category: string): void {
       self.category = category
       self.updatedAt = new Date().toISOString()
-    }
+    },
   }))
+
+// Factory to create a new credential with defaults
+export const createCredentialDefaults = () => {
+  return {
+    id: generateId(),
+    title: "",
+    website: "",
+    username: "",
+    password: "",
+    notes: "",
+    category: "uncategorized",
+    favorite: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    tags: [],
+  }
+}
 
 export interface Credential extends Instance<typeof CredentialModel> {}
 export interface CredentialSnapshot extends SnapshotOut<typeof CredentialModel> {}

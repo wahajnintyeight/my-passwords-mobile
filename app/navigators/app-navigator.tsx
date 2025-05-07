@@ -4,17 +4,17 @@
  * the splash screen initially, and then transitions to the bottom tab navigator.
  */
 import React from "react"
-import { useColorScheme } from "react-native"
-import { NavigationContainer, Theme } from "@react-navigation/native"
+import { DarkTheme, DefaultTheme, NavigationContainer, Theme } from "@react-navigation/native"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { BottomTabNavigator } from "./bottom-tab-navigator"
-import { SplashScreen } from "../screens"
+import { colors } from "../theme"
+import { SplashScreen } from "../screens/splash-screen"
 import { CredentialDetailScreen } from "../screens/credential-detail-screen"
 import { AddCredentialScreen } from "../screens/add-credential-screen"
 import { ScanScreen } from "../screens/scan-screen"
 import { ImportExportScreen } from "../screens/import-export-screen"
-import { colors } from "../theme"
 
+// Define the parameter list for the stack navigator
 export type AppStackParamList = {
   Splash: undefined
   Main: undefined
@@ -24,71 +24,71 @@ export type AppStackParamList = {
   ImportExport: undefined
 }
 
+// Create the stack navigator
 const Stack = createNativeStackNavigator<AppStackParamList>()
 
 export interface NavigationProps
   extends Partial<React.ComponentProps<typeof NavigationContainer>> {}
 
 export function AppNavigator(props: NavigationProps) {
-  const colorScheme = useColorScheme()
-
+  // Use light/dark specific theme
   const MyTheme: Theme = {
-    dark: colorScheme === "dark",
+    ...DefaultTheme,
     colors: {
+      ...DefaultTheme.colors,
       primary: colors.primary,
       background: colors.background,
-      card: colors.card,
+      card: colors.background,
       text: colors.text,
       border: colors.border,
-      notification: colors.notification,
+      notification: colors.error,
     },
   }
 
   return (
-    <NavigationContainer theme={MyTheme} {...props}>
+    <NavigationContainer
+      theme={MyTheme}
+      {...props}
+    >
       <Stack.Navigator
         screenOptions={{
           headerShown: false,
-          animation: "slide_from_right",
+          navigationBarColor: colors.background,
         }}
         initialRouteName="Splash"
       >
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Main" component={BottomTabNavigator} />
-        <Stack.Screen 
-          name="CredentialDetail" 
-          component={CredentialDetailScreen} 
-          options={{ 
-            headerShown: true, 
+        <Stack.Screen
+          name="CredentialDetail"
+          component={CredentialDetailScreen}
+          options={{
+            headerShown: true,
             title: "Credential Details",
-            headerBackTitle: "Back"
           }}
         />
-        <Stack.Screen 
-          name="AddCredential" 
-          component={AddCredentialScreen} 
-          options={{ 
-            headerShown: true, 
+        <Stack.Screen
+          name="AddCredential"
+          component={AddCredentialScreen}
+          options={{
+            headerShown: true,
             title: "Add Credential",
-            headerBackTitle: "Back"
           }}
         />
-        <Stack.Screen 
-          name="Scan" 
-          component={ScanScreen} 
-          options={{ 
-            headerShown: true, 
-            title: "Scan Credentials",
-            headerBackTitle: "Back"
+        <Stack.Screen
+          name="Scan"
+          component={ScanScreen}
+          options={{
+            headerShown: true,
+            title: "Scan Login Fields",
           }}
         />
-        <Stack.Screen 
-          name="ImportExport" 
-          component={ImportExportScreen} 
-          options={{ 
-            headerShown: true, 
-            title: "Import/Export",
-            headerBackTitle: "Back"
+        <Stack.Screen
+          name="ImportExport"
+          component={ImportExportScreen}
+          options={{
+            headerShown: true,
+            title: "Import & Export",
           }}
         />
       </Stack.Navigator>

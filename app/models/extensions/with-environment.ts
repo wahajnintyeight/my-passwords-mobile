@@ -1,21 +1,37 @@
 /**
- * Extension to add environment to a model
+ * Environment extension for mobx-state-tree models
  */
-import { getEnv, IStateTreeNode } from "mobx-state-tree"
 import { Environment } from "../../services/environment"
+import { getSnapshot, IStateTreeNode, types } from "mobx-state-tree"
 
 /**
- * Adds a environment property to the node's context.
+ * Model extension to include environment properties
  */
-export const withEnvironment = (self: IStateTreeNode) => {
+export const withEnvironment = types.model({}).extend(self => {
+  // Create a new Environment instance
+  let environment = new Environment()
+
   return {
     views: {
       /**
-       * Get the environment.
+       * Get environment
        */
       get environment() {
-        return getEnv<Environment>(self)
-      }
-    }
+        return environment
+      },
+    },
+    actions: {
+      /**
+       * Set the environment
+       */
+      setEnvironment(value: Environment) {
+        environment = value
+      },
+    },
   }
-}
+})
+
+/**
+ * Helper function to create a new Environment instance
+ */
+export const createEnvironment = () => new Environment()

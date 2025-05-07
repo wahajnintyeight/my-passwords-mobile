@@ -1,21 +1,22 @@
 /**
- * Extension to add root store reference to a model
+ * Root store extension for mobx-state-tree models
  */
-import { getRoot, IStateTreeNode } from "mobx-state-tree"
+import { IStateTreeNode, types } from "mobx-state-tree"
 import { RootStore } from "../root-store"
 
 /**
- * Adds a rootStore property to the node's context.
+ * Model extension to include root store as a property
  */
-export const withRootStore = (self: IStateTreeNode) => {
-  return {
-    views: {
-      /**
-       * Get the root store.
-       */
-      get rootStore() {
-        return getRoot<RootStore>(self)
-      }
-    }
-  }
-}
+export const withRootStore = types.model({}).volatile(self => ({
+  /**
+   * Root store reference
+   */
+  rootStore: null as unknown as RootStore,
+})).actions(self => ({
+  /**
+   * Set the root store
+   */
+  setRootStore(value: IStateTreeNode) {
+    (self as any).rootStore = value
+  },
+}))

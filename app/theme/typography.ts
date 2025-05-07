@@ -8,20 +8,16 @@ import { Platform } from "react-native"
  * https://github.com/react-native-training/react-native-fonts
  */
 export const customFontsToLoad = {
-  "Poppins-Light": require("../assets/fonts/Poppins-Light.ttf"),
-  "Poppins-Regular": require("../assets/fonts/Poppins-Regular.ttf"),
-  "Poppins-Medium": require("../assets/fonts/Poppins-Medium.ttf"),
-  "Poppins-SemiBold": require("../assets/fonts/Poppins-SemiBold.ttf"),
-  "Poppins-Bold": require("../assets/fonts/Poppins-Bold.ttf"),
+  // Using system fonts for now
 }
 
 const fonts = {
-  poppins: {
-    light: "Poppins-Light",
-    normal: "Poppins-Regular",
-    medium: "Poppins-Medium",
-    semiBold: "Poppins-SemiBold",
-    bold: "Poppins-Bold",
+  system: {
+    light: "System",
+    normal: "System",
+    medium: "System",
+    semiBold: "System",
+    bold: "System",
   },
   helveticaNeue: {
     // iOS only font.
@@ -58,46 +54,46 @@ export const typography = {
   primary: Platform.select({
     ios: {
       light: {
-        fontFamily: fonts.poppins.light,
-        fontWeight: "normal",
+        fontFamily: fonts.system.light,
+        fontWeight: "300",
       },
       normal: {
-        fontFamily: fonts.poppins.normal,
-        fontWeight: "normal",
+        fontFamily: fonts.system.normal,
+        fontWeight: "400",
       },
       medium: {
-        fontFamily: fonts.poppins.medium,
-        fontWeight: "normal",
+        fontFamily: fonts.system.medium,
+        fontWeight: "500",
       },
       semiBold: {
-        fontFamily: fonts.poppins.semiBold,
-        fontWeight: "normal",
+        fontFamily: fonts.system.semiBold,
+        fontWeight: "600",
       },
       bold: {
-        fontFamily: fonts.poppins.bold,
-        fontWeight: "normal",
+        fontFamily: fonts.system.bold,
+        fontWeight: "700",
       },
     },
     android: {
       light: {
-        fontFamily: fonts.poppins.light,
-        fontWeight: "normal",
+        fontFamily: fonts.system.light,
+        fontWeight: "300",
       },
       normal: {
-        fontFamily: fonts.poppins.normal,
-        fontWeight: "normal",
+        fontFamily: fonts.system.normal,
+        fontWeight: "400",
       },
       medium: {
-        fontFamily: fonts.poppins.medium,
-        fontWeight: "normal",
+        fontFamily: fonts.system.medium,
+        fontWeight: "500",
       },
       semiBold: {
-        fontFamily: fonts.poppins.semiBold,
-        fontWeight: "normal",
+        fontFamily: fonts.system.semiBold,
+        fontWeight: "600",
       },
       bold: {
-        fontFamily: fonts.poppins.bold,
-        fontWeight: "normal",
+        fontFamily: fonts.system.bold,
+        fontWeight: "700",
       },
     },
   }),

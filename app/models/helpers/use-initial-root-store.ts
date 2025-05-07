@@ -1,75 +1,73 @@
 /**
- * Hook to initialize and use the root store
+ * Helper function to setup and initialize the root store
  */
+import { onSnapshot } from "mobx-state-tree"
 import { useEffect, useState } from "react"
+import { createEnvironment, Environment } from "../extensions/with-environment"
 import { RootStore, RootStoreModel } from "../root-store"
-import { Environment } from "../../services/environment"
-import { setupRootStore } from "./setup-root-store"
+import * as storage from "../../utils/storage-helpers"
 
 /**
- * Setup the root store for application state.
+ * Setup the environment
  */
-let rootStore: RootStore
-
-/**
- * Hook to set up and initialize the root store
- */
-export const useInitialRootStore = (callback: () => void | Promise<void> = () => {}) => {
-  const [rootStoreReady, setRootStoreReady] = useState<boolean>(!!(rootStore && rootStore.authStore))
-  
-  // Prepare root store
-  useEffect(() => {
-    let environment: Environment
-    
-    // Set up root store
-    const initializeRootStore = async () => {
-      let setupRootStoreResult = await setupRootStore()
-      rootStore = setupRootStoreResult.rootStore
-      environment = setupRootStoreResult.environment
-      
-      if (callback) {
-        await callback()
-      }
-      
-      setRootStoreReady(true)
-    }
-
-    initializeRootStore()
-    
-    return () => {
-      rootStore = undefined
-      environment = undefined
-    }
-  }, [])
-
-  return { rootStore, rootStoreReady }
+async function setupEnvironment() {
+  const env = createEnvironment()
+  return env
 }
+
+/**
+ * Setup the root store
+ */
+async function setupRootStoreFromEnvironment(env: Environment) {
+  const rootStore = RootStoreModel.create({}, env)
+  
+  // Set up store references
+  rootStore.authStore.setRootStore(rootStore)
+  rootStore.credentialStore.setRootStore(rootStore)
+
+  // Initialize data
+  await rootStore.authStore.initialize()
+  await rootStore.credentialStore.loadCredentials()
+  
+  // Track changes and save to storage
+  onSnapshot(rootStore, snapshot => {
+    console.log("Snapshot updated:", snapshot)
+  })
+
+  return rootStore
+}
+
+/**
+ * The key we'll use for storing our root state
+ */
+const ROOT_STATE_STORAGE_KEY = "root"
 
 /**
  * Setup the root store for the application.
  */
-export const setupRootStore = async () => {
-  let rootStore: RootStore
-  let data: any = {}
+export function useInitialRootStore(callback: () => void | (() => void)) {
+  const [rootStore, setRootStore] = useState<RootStore | undefined>(undefined)
+  const [restoredState, setRestoredState] = useState(false)
 
-  try {
-    // Create the environment
-    const env = new Environment()
-    
-    // Create the root store
-    rootStore = RootStoreModel.create({}, env)
-    
-    // Initialize auth store
-    await rootStore.authStore.initialize()
-    
-    // Load credentials
-    await rootStore.credentialStore.loadCredentials()
+  // Set up the stores asynchronously
+  useEffect(() => {
+    let cancelFn: (() => void) | undefined
+    let env: Environment
 
-    return { rootStore, environment: env }
-  } catch (e) {
-    // If there's any problems loading the store, then destroy it and create a new one
-    rootStore = RootStoreModel.create(data)
-    
-    return { rootStore, environment: new Environment() }
-  }
+    const initStores = async () => {
+      env = await setupEnvironment()
+      const store = await setupRootStoreFromEnvironment(env)
+      setRootStore(store)
+      setRestoredState(true)
+      cancelFn = callback()
+    }
+
+    initStores()
+
+    return () => {
+      if (cancelFn) cancelFn()
+    }
+  }, [callback])
+
+  return { rootStore, restoredState: restoredState }
 }
