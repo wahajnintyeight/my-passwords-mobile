@@ -1,55 +1,44 @@
 /**
- * Defines the color palette for the app
+ * Color definitions for the app
  */
-import { Platform } from "react-native"
-
-// Semantic names for colors to be used throughout the app
 export const colors = {
-  // Base colors
-  transparent: "rgba(0, 0, 0, 0)",
-  white: "#FFFFFF",
-  black: "#000000",
-  
-  // Primary brand colors
+  // Primary colors
   primary: "#2563EB", // Blue
-  primaryDark: "#1E40AF",
-  primaryLight: "#93C5FD",
-  
-  // Secondary brand colors
-  secondary: "#4F46E5", // Indigo
-  secondaryDark: "#4338CA",
-  secondaryLight: "#C7D2FE",
-  
-  // Accent colors
-  accent: "#10B981", // Emerald
-  accentDark: "#059669",
-  accentLight: "#A7F3D0",
-  
-  // Status colors
-  success: "#10B981", // Green
-  warning: "#F59E0B", // Amber
-  error: "#EF4444", // Red
-  info: "#3B82F6", // Blue
-  
-  // Background colors
-  background: "#F9FAFB", // Light gray background
-  card: "#FFFFFF",
-  lighterGrey: "#F3F4F6",
-  lightGrey: "#E5E7EB",
+  secondary: "#7C3AED", // Purple
+  accent: "#F59E0B", // Amber
   
   // Text colors
-  text: "#111827", // Almost black
-  textDim: "#6B7280", // Medium gray
-  textLight: "#9CA3AF", // Lighter gray
-  placeholder: "#D1D5DB",
+  text: "#1F2937", // Gray 800
+  textDim: "#6B7280", // Gray 500
+  textLight: "#9CA3AF", // Gray 400
+  white: "#FFFFFF",
+  
+  // Background colors
+  background: "#F9FAFB", // Gray 50
+  card: "#FFFFFF",
+  surface: "#F3F4F6", // Gray 100
   
   // Border and separator colors
-  separator: "#E5E7EB",
-  border: "#D1D5DB",
+  border: "#E5E7EB", // Gray 200 
+  separator: "#F3F4F6", // Gray 100
   
-  // Shadow color
-  shadowColor: Platform.select({
-    ios: "rgba(0, 0, 0, 0.1)",
-    android: "rgba(0, 0, 0, 0.2)",
-  }),
+  // Status colors
+  success: "#10B981", // Emerald 500
+  warning: "#F59E0B", // Amber 500
+  error: "#EF4444", // Red 500
+  info: "#3B82F6", // Blue 500
+  
+  // Category colors (for credential categories)
+  categoryWebsite: "#2563EB", // Blue
+  categoryFinancial: "#10B981", // Emerald
+  categoryPersonal: "#7C3AED", // Purple
+  categoryWork: "#F59E0B", // Amber
+  categoryOther: "#6B7280", // Gray
+  
+  // Dark mode specific colors 
+  // These should be accessed conditionally based on theme
+  primaryDark: "#3B82F6", // Blue 500
+  backgroundDark: "#1F2937", // Gray 800
+  cardDark: "#374151", // Gray 700
+  textDark: "#F9FAFB", // Gray 50
 }

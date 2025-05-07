@@ -1,41 +1,58 @@
 /**
- * Defines spacing values used throughout the app
- * Following a standard scale helps maintain design consistency
+ * Spacing definitions for consistent layout
  */
 
 export const spacing = {
-  /**
-   * Extra small spacing (4px)
-   */
+  // Base spacing unit (4 pixels)
+  unit: 4,
+  
+  // Commonly used spacing values
+  micro: 2,
   tiny: 4,
+  xxs: 8,
+  xs: 12,
+  sm: 16,
+  md: 24,
+  lg: 32,
+  xl: 48,
+  xxl: 64,
   
-  /**
-   * Small spacing (8px)
-   */
-  small: 8,
+  // Spacing for specific UI elements
+  screenHorizontal: 16,
+  screenTop: 24,
+  screenBottom: 24,
   
-  /**
-   * Medium spacing (16px) - The most commonly used spacing unit
-   */
-  medium: 16,
+  // Content spacing
+  cardPadding: 16,
+  listItemVertical: 12,
   
-  /**
-   * Large spacing (24px)
-   */
-  large: 24,
+  // Form spacing
+  inputVertical: 8,
+  inputHorizontal: 16,
+  inputHeight: 48,
+  inputGap: 24,
   
-  /**
-   * Extra large spacing (32px)
-   */
-  extraLarge: 32,
+  // Button sizing
+  buttonHeight: 48,
+  buttonVertical: 12,
+  buttonHorizontal: 20,
+  buttonRadius: 8,
   
-  /**
-   * Massive spacing (48px) - Used for major section breaks
-   */
-  massive: 48,
+  // Additional spacing for specific elements
+  iconSize: {
+    tiny: 16,
+    small: 20,
+    medium: 24,
+    large: 32,
+    huge: 48,
+  },
   
-  /**
-   * Huge spacing (64px) - Used for very large gaps
-   */
-  huge: 64,
+  // Border radius values
+  borderRadius: {
+    tiny: 4,
+    small: 8,
+    medium: 12,
+    large: 16,
+    round: 9999,
+  },
 }

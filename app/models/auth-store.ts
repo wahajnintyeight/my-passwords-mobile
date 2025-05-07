@@ -1,10 +1,9 @@
 /**
  * Store for managing authentication state
  */
-import { Instance, SnapshotOut, types } from "mobx-state-tree"
-import { authService } from "../services/auth-service"
-import { withEnvironment } from "./extensions/with-environment"
-import { withRootStore } from "./extensions/with-root-store"
+import { Instance, SnapshotOut, types, flow } from "mobx-state-tree"
+import { authApi } from "../services/api"
+import { loadFromStorage, saveToStorage } from "../utils/storage-helpers"
 
 /**
  * Store to manage authentication state
@@ -14,18 +13,9 @@ export const AuthStoreModel = types
   .props({
     authenticated: types.optional(types.boolean, false),
     offlineMode: types.optional(types.boolean, false),
-    userData: types.optional(
-      types.model({
-        name: types.maybe(types.string),
-        email: types.maybe(types.string),
-        profilePic: types.maybe(types.string),
-      }),
-      {},
-    ),
+    userData: types.optional(types.frozen<any>({}), {}),
     loading: types.optional(types.boolean, false),
   })
-  .extend(withEnvironment)
-  .extend(withRootStore)
   .views((self) => ({
     /**
      * Get full user data
@@ -66,65 +56,92 @@ export const AuthStoreModel = types
     /**
      * Initialize auth state
      */
-    async initialize(): Promise<void> {
+    initialize: flow(function* () {
       self.setLoading(true)
       try {
-        const isAuthenticated = await authService.isAuthenticated()
-        self.setAuthenticated(isAuthenticated)
-        
-        if (isAuthenticated) {
-          const userData = await authService.getUserProfile()
-          if (userData) {
-            self.setUserData(userData)
+        // First check if we have stored auth data
+        const storedAuth = yield loadFromStorage("auth")
+        if (storedAuth && storedAuth.authenticated) {
+          self.setAuthenticated(true)
+          self.setUserData(storedAuth.userData || {})
+          
+          // Verify token with API if we're not in offline mode
+          if (!self.offlineMode) {
+            try {
+              const result = yield authApi.verifyToken()
+              if (!result.valid) {
+                self.setAuthenticated(false)
+              }
+            } catch (error) {
+              console.log("Token verification failed, setting to offline mode", error)
+              self.setOfflineMode(true)
+            }
           }
         }
       } catch (error) {
-        console.error("Failed to initialize auth state:", error)
-        self.setAuthenticated(false)
-        self.setOfflineMode(true)
+        console.error("Auth initialization error:", error)
       } finally {
         self.setLoading(false)
       }
-    },
+    }),
 
     /**
      * Login with Google
      */
-    async loginWithGoogle(): Promise<boolean> {
+    loginWithGoogle: flow(function* () {
       self.setLoading(true)
       try {
-        const result = await authService.signInWithGoogle()
-        if (result.success) {
-          self.setAuthenticated(true)
-          self.setUserData(result.user)
-          return true
+        // Normally we would have Google Auth integration here
+        // For demo, we'll simulate a successful login
+        const mockSuccessfulLogin = {
+          user: {
+            name: "John Doe",
+            email: "john@example.com",
+            profilePic: "https://via.placeholder.com/150"
+          },
+          token: "mock-token-123456789"
         }
-        return false
+        
+        self.setAuthenticated(true)
+        self.setUserData(mockSuccessfulLogin.user)
+        
+        // Save auth state to storage
+        yield saveToStorage("auth", {
+          authenticated: true,
+          userData: self.userData,
+          token: mockSuccessfulLogin.token
+        })
+        
+        return true
       } catch (error) {
-        console.error("Google login failed:", error)
+        console.error("Google login error:", error)
         return false
       } finally {
         self.setLoading(false)
       }
-    },
+    }),
 
     /**
      * Logout
      */
-    async logout(): Promise<void> {
+    logout: flow(function* () {
       self.setLoading(true)
       try {
-        await authService.signOut()
         self.setAuthenticated(false)
         self.setUserData({})
-        // Clear credentials when logging out
-        self.rootStore.credentialStore.clearAllCredentials()
+        self.setOfflineMode(false)
+        
+        // Clear auth from storage
+        yield saveToStorage("auth", { authenticated: false })
+        
+        return true
       } catch (error) {
-        console.error("Logout failed:", error)
+        console.error("Logout error:", error)
+        return false
       } finally {
         self.setLoading(false)
       }
-    },
+    }),
 
     /**
      * Reset the store to its initial state

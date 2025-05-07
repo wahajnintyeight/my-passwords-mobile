@@ -1,5 +1,5 @@
 /**
- * Export all theme elements from a single file
+ * Export all theme elements from a single place
  */
 export * from "./colors"
 export * from "./spacing"

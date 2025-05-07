@@ -1,100 +1,158 @@
 /**
- * Helper utilities for storage operations
+ * Helper functions for accessing local storage
  */
-import AsyncStorage from "@react-native-async-storage/async-storage"
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 /**
- * Get all stored credential IDs
+ * Save data to local storage
+ * @param key Storage key
+ * @param value Data to store
+ * @returns Promise that resolves when data is saved
  */
-export async function getStoredCredentialIds(): Promise<string[]> {
+export async function saveToStorage(key: string, value: any): Promise<void> {
+  try {
+    const jsonValue = typeof value === 'string' ? value : JSON.stringify(value)
+    await AsyncStorage.setItem(key, jsonValue)
+  } catch (error) {
+    console.error(`Error saving to storage for key "${key}":`, error)
+    throw error
+  }
+}
+
+/**
+ * Load data from local storage
+ * @param key Storage key
+ * @returns Promise that resolves with the data or null if not found
+ */
+export async function loadFromStorage(key: string): Promise<any> {
+  try {
+    const value = await AsyncStorage.getItem(key)
+    if (value === null) {
+      return null
+    }
+    
+    try {
+      // Try to parse as JSON
+      return JSON.parse(value)
+    } catch (e) {
+      // If parsing fails, return the raw string
+      return value
+    }
+  } catch (error) {
+    console.error(`Error loading from storage for key "${key}":`, error)
+    return null
+  }
+}
+
+/**
+ * Remove data from local storage
+ * @param key Storage key
+ * @returns Promise that resolves when data is removed
+ */
+export async function removeFromStorage(key: string): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(key)
+  } catch (error) {
+    console.error(`Error removing from storage for key "${key}":`, error)
+    throw error
+  }
+}
+
+/**
+ * Clear all data from local storage
+ * @returns Promise that resolves when all data is cleared
+ */
+export async function clearStorage(): Promise<void> {
+  try {
+    await AsyncStorage.clear()
+  } catch (error) {
+    console.error('Error clearing storage:', error)
+    throw error
+  }
+}
+
+/**
+ * Get all keys from local storage
+ * @returns Promise that resolves with an array of keys
+ */
+export async function getAllStorageKeys(): Promise<string[]> {
   try {
     const keys = await AsyncStorage.getAllKeys()
-    return keys.filter(key => key.startsWith("credential_"))
+    return keys
   } catch (error) {
-    console.error("Error fetching credential IDs:", error)
+    console.error('Error getting all storage keys:', error)
     return []
   }
 }
 
 /**
- * Clear all stored credentials
+ * Get multiple items from local storage by keys
+ * @param keys Array of storage keys
+ * @returns Promise that resolves with an object of key-value pairs
  */
-export async function clearAllCredentials(): Promise<boolean> {
+export async function getMultipleFromStorage(keys: string[]): Promise<Record<string, any>> {
   try {
-    const keys = await getStoredCredentialIds()
-    if (keys.length > 0) {
-      await AsyncStorage.multiRemove(keys)
-    }
-    return true
-  } catch (error) {
-    console.error("Error clearing credentials:", error)
-    return false
-  }
-}
-
-/**
- * Check if storage is available and working
- */
-export async function isStorageAvailable(): Promise<boolean> {
-  try {
-    const testKey = "__storage_test__"
-    await AsyncStorage.setItem(testKey, "test")
-    await AsyncStorage.removeItem(testKey)
-    return true
-  } catch (error) {
-    console.error("Storage availability test failed:", error)
-    return false
-  }
-}
-
-/**
- * Get storage usage info
- * This is a rough estimation as AsyncStorage doesn't provide direct size info
- */
-export async function getStorageUsage(): Promise<{
-  itemCount: number
-  estimatedSize: string
-}> {
-  try {
-    const keys = await AsyncStorage.getAllKeys()
-    let totalSize = 0
+    const pairs = await AsyncStorage.multiGet(keys)
+    const result: Record<string, any> = {}
     
-    // Sample a few items to estimate average size
-    const sampleSize = Math.min(keys.length, 10)
-    const sampleKeys = keys.slice(0, sampleSize)
-    
-    for (const key of sampleKeys) {
-      const value = await AsyncStorage.getItem(key)
+    for (const [key, value] of pairs) {
       if (value) {
-        totalSize += value.length + key.length
+        try {
+          // Try to parse as JSON
+          result[key] = JSON.parse(value)
+        } catch (e) {
+          // If parsing fails, store the raw string
+          result[key] = value
+        }
       }
     }
     
-    // Calculate average size per item
-    const avgSize = sampleSize > 0 ? totalSize / sampleSize : 0
-    
-    // Estimate total size
-    const estimatedTotalBytes = avgSize * keys.length
-    
-    // Format size
-    let estimatedSize: string
-    if (estimatedTotalBytes < 1024) {
-      estimatedSize = `${estimatedTotalBytes} bytes`
-    } else if (estimatedTotalBytes < 1024 * 1024) {
-      estimatedSize = `${(estimatedTotalBytes / 1024).toFixed(2)} KB`
-    } else {
-      estimatedSize = `${(estimatedTotalBytes / (1024 * 1024)).toFixed(2)} MB`
-    }
-    
-    return {
-      itemCount: keys.length,
-      estimatedSize
-    }
+    return result
   } catch (error) {
-    console.error("Error getting storage usage:", error)
-    return {
-      itemCount: 0,
-      estimatedSize: "0 bytes"
-    }
+    console.error('Error getting multiple items from storage:', error)
+    return {}
+  }
+}
+
+/**
+ * Remove multiple items from local storage by keys
+ * @param keys Array of storage keys
+ * @returns Promise that resolves when all items are removed
+ */
+export async function removeMultipleFromStorage(keys: string[]): Promise<void> {
+  try {
+    await AsyncStorage.multiRemove(keys)
+  } catch (error) {
+    console.error('Error removing multiple items from storage:', error)
+    throw error
+  }
+}
+
+/**
+ * Get all items from local storage
+ * @returns Promise that resolves with an object of all key-value pairs
+ */
+export async function getAllFromStorage(): Promise<Record<string, any>> {
+  try {
+    const keys = await AsyncStorage.getAllKeys()
+    return await getMultipleFromStorage(keys)
+  } catch (error) {
+    console.error('Error getting all items from storage:', error)
+    return {}
+  }
+}
+
+/**
+ * Check if a key exists in local storage
+ * @param key Storage key
+ * @returns Promise that resolves with boolean indicating if key exists
+ */
+export async function hasKey(key: string): Promise<boolean> {
+  try {
+    const value = await AsyncStorage.getItem(key)
+    return value !== null
+  } catch (error) {
+    console.error(`Error checking if key "${key}" exists:`, error)
+    return false
   }
 }

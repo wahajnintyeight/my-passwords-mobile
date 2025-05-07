@@ -2,6 +2,7 @@
  * Model for credential data
  */
 import { Instance, SnapshotOut, types } from "mobx-state-tree"
+import { getDomainFromUrl } from "../utils/format-helpers"
 import { generateId } from "../utils/encryption"
 
 /**
@@ -16,10 +17,11 @@ export const CredentialModel = types
     username: types.string,
     password: types.string,
     notes: types.optional(types.string, ""),
-    category: types.optional(types.string, "uncategorized"),
     favorite: types.optional(types.boolean, false),
-    createdAt: types.optional(types.string, () => new Date().toISOString()),
-    updatedAt: types.optional(types.string, () => new Date().toISOString()),
+    category: types.optional(types.string, "website"),
+    icon: types.optional(types.string, ""),
+    lastUpdated: types.optional(types.string, ""),
+    createdAt: types.string,
     tags: types.optional(types.array(types.string), []),
   })
   .views((self) => ({
@@ -27,37 +29,33 @@ export const CredentialModel = types
      * Get primary domain from website URL
      */
     get domain(): string {
-      try {
-        const url = new URL(self.website.startsWith("http") ? self.website : `https://${self.website}`)
-        return url.hostname.replace(/^www\./i, "")
-      } catch (error) {
-        // If not a valid URL, just return the original value
-        return self.website
-      }
+      return getDomainFromUrl(self.website)
     },
-
+  }))
+  .actions((self) => ({
     /**
      * Check if credential contains given search term
      */
     matchesSearch(term: string): boolean {
       if (!term) return true
+      
       const searchTerm = term.toLowerCase()
       return (
         self.title.toLowerCase().includes(searchTerm) ||
         self.website.toLowerCase().includes(searchTerm) ||
         self.username.toLowerCase().includes(searchTerm) ||
-        self.notes.toLowerCase().includes(searchTerm) ||
         self.domain.toLowerCase().includes(searchTerm) ||
+        self.notes.toLowerCase().includes(searchTerm) ||
+        self.category.toLowerCase().includes(searchTerm) ||
         self.tags.some((tag) => tag.toLowerCase().includes(searchTerm))
       )
     },
-  }))
-  .actions((self) => ({
+
     /**
      * Update credential properties
      */
     update(newData: Partial<typeof self>): void {
-      Object.assign(self, { ...newData, updatedAt: new Date().toISOString() })
+      Object.assign(self, { ...newData, lastUpdated: new Date().toISOString() })
     },
 
     /**
@@ -65,7 +63,7 @@ export const CredentialModel = types
      */
     toggleFavorite(): void {
       self.favorite = !self.favorite
-      self.updatedAt = new Date().toISOString()
+      self.lastUpdated = new Date().toISOString()
     },
 
     /**
@@ -74,7 +72,7 @@ export const CredentialModel = types
     addTag(tag: string): void {
       if (!self.tags.includes(tag)) {
         self.tags.push(tag)
-        self.updatedAt = new Date().toISOString()
+        self.lastUpdated = new Date().toISOString()
       }
     },
 
@@ -85,7 +83,7 @@ export const CredentialModel = types
       const index = self.tags.indexOf(tag)
       if (index !== -1) {
         self.tags.splice(index, 1)
-        self.updatedAt = new Date().toISOString()
+        self.lastUpdated = new Date().toISOString()
       }
     },
 
@@ -94,11 +92,13 @@ export const CredentialModel = types
      */
     setCategory(category: string): void {
       self.category = category
-      self.updatedAt = new Date().toISOString()
+      self.lastUpdated = new Date().toISOString()
     },
   }))
 
-// Factory to create a new credential with defaults
+/**
+ * Generate default values for a new credential
+ */
 export const createCredentialDefaults = () => {
   return {
     id: generateId(),
@@ -107,10 +107,11 @@ export const createCredentialDefaults = () => {
     username: "",
     password: "",
     notes: "",
-    category: "uncategorized",
     favorite: false,
+    category: "website",
+    icon: "",
+    lastUpdated: new Date().toISOString(),
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
     tags: [],
   }
 }

@@ -1,71 +1,110 @@
 /**
  * App configuration
  */
-export default {
+export interface AppConfig {
   /**
    * The app name
    */
-  name: "SecureVault",
+  name: string
   
   /**
    * API endpoint
    */
-  apiUrl: "https://api.wahaj.codes:8443/v2/api",
+  api: {
+    url: string
+    timeout: number
+  }
   
   /**
    * Should we catch errors in the React render lifecycle?
    */
-  catchErrors: true,
+  catchErrors: boolean
   
   /**
    * Should we show development screens in non-production builds?
    */
-  showDevScreens: __DEV__,
+  showDevScreens: boolean
   
   /**
    * Is this a production build?
    */
-  isProduction: !__DEV__,
-
+  isProduction: boolean
+  
   /**
    * Should we enable OCR scanning in this build?
    */
-  enableOCR: true,
+  enableOcr: boolean
   
   /**
    * Default credential settings
    */
-  defaultCredentialSettings: {
-    passwordLength: 16,
-    includeUppercase: true,
-    includeLowercase: true,
-    includeNumbers: true,
-    includeSymbols: true,
-  },
+  credential: {
+    passwordLength: number
+    defaultCategory: string
+  }
   
   /**
    * Auto-lock settings
    */
   autoLock: {
-    enabled: true,
-    timeout: 60, // seconds
-    biometricEnabled: true,
-  },
+    enabled: boolean
+    timeout: number // in milliseconds
+  }
   
   /**
    * Storage configuration
    */
   storage: {
-    prefix: "securevault_",
-    encryption: true,
-  },
+    prefix: string
+    encryption: boolean
+  }
   
   /**
    * Default settings
    */
-  defaultSettings: {
-    theme: "light",
-    hidePasswords: true,
-    autoFill: true,
+  defaults: {
+    biometricEnabled: boolean
+    darkMode: boolean
+    notificationsEnabled: boolean
+  }
+}
+
+/**
+ * Default app configuration
+ */
+const Config: AppConfig = {
+  name: "SecureVault",
+  
+  api: {
+    url: "https://api.wahaj.codes:8443/v2/api",
+    timeout: 10000, // 10 seconds
+  },
+  
+  catchErrors: true,
+  showDevScreens: __DEV__,
+  isProduction: !__DEV__,
+  enableOcr: true,
+  
+  credential: {
+    passwordLength: 12,
+    defaultCategory: "website",
+  },
+  
+  autoLock: {
+    enabled: true,
+    timeout: 1000 * 60 * 5, // 5 minutes
+  },
+  
+  storage: {
+    prefix: "secure_vault_",
+    encryption: true,
+  },
+  
+  defaults: {
+    biometricEnabled: false,
+    darkMode: false,
+    notificationsEnabled: true,
   },
 }
+
+export default Config

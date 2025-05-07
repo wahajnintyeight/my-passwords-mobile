@@ -1,112 +1,129 @@
 /**
- * Utilities for encryption and password operations
+ * Utilities for encryption and secure data handling
  */
-import CryptoJS from "crypto-js"
+import * as Crypto from 'expo-crypto'
+import CryptoJS from 'crypto-js'
+
+// Default encryption key, in production this would be securely stored in environment variables
+// or secure storage, and unique per user
+const DEFAULT_ENCRYPTION_KEY = "secureVaultAppEncryptionKey2023!"
 
 /**
- * Encrypt a string
- * @param text Text to encrypt
- * @param secretKey Encryption key
+ * Generate a unique ID using cryptographic random values
+ * @returns Unique identifier string
  */
-export function encrypt(text: string, secretKey: string): string {
-  try {
-    return CryptoJS.AES.encrypt(text, secretKey).toString()
-  } catch (error) {
-    console.error("Encryption error:", error)
-    throw new Error("Failed to encrypt data")
-  }
+export function generateId(): string {
+  return Crypto.randomUUID()
 }
 
 /**
- * Decrypt a string
- * @param encryptedText Encrypted text
- * @param secretKey Encryption key
+ * Generate a cryptographically secure random value
+ * @param length Length of the random value
+ * @returns Random string
  */
-export function decrypt(encryptedText: string, secretKey: string): string {
-  try {
-    const bytes = CryptoJS.AES.decrypt(encryptedText, secretKey)
-    return bytes.toString(CryptoJS.enc.Utf8)
-  } catch (error) {
-    console.error("Decryption error:", error)
-    throw new Error("Failed to decrypt data. Invalid key or data.")
-  }
-}
-
-/**
- * Generate a random password
- * @param options Password generation options
- */
-export function generatePassword(options: {
-  length?: number
-  uppercase?: boolean
-  lowercase?: boolean
-  numbers?: boolean
-  symbols?: boolean
-}): string {
-  const length = options.length || 16
+export function generateRandomValue(length: number = 32): string {
+  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_-+=<>?'
+  let result = ''
   
-  const uppercaseChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-  const lowercaseChars = "abcdefghijklmnopqrstuvwxyz"
-  const numberChars = "0123456789"
-  const symbolChars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
-  
-  // Build the character set based on options
-  let chars = ""
-  if (options.uppercase !== false) chars += uppercaseChars
-  if (options.lowercase !== false) chars += lowercaseChars
-  if (options.numbers !== false) chars += numberChars
-  if (options.symbols !== false) chars += symbolChars
-  
-  // Default to lowercase + numbers if nothing selected
-  if (!chars) chars = lowercaseChars + numberChars
-  
-  // Generate the password
-  let password = ""
   for (let i = 0; i < length; i++) {
-    const randomIndex = Math.floor(Math.random() * chars.length)
-    password += chars[randomIndex]
+    // Use crypto-secure random number generation
+    const randomValues = new Uint8Array(1)
+    Crypto.getRandomBytes(randomValues)
+    result += charset[randomValues[0] % charset.length]
   }
   
-  // Ensure the password has at least one character from each selected type
-  const types = []
-  if (options.uppercase !== false) types.push(uppercaseChars)
-  if (options.lowercase !== false) types.push(lowercaseChars)
-  if (options.numbers !== false) types.push(numberChars)
-  if (options.symbols !== false) types.push(symbolChars)
-  
-  // Replace characters to ensure all types are included
-  for (let i = 0; i < types.length; i++) {
-    const typeChars = types[i]
-    const randomTypeChar = typeChars[Math.floor(Math.random() * typeChars.length)]
-    const randomPosition = Math.floor(Math.random() * length)
-    password = password.substring(0, randomPosition) + randomTypeChar + password.substring(randomPosition + 1)
-  }
-  
-  return password
+  return result
+}
+
+/**
+ * Encrypt data using AES encryption
+ * @param data Data to encrypt
+ * @param key Optional encryption key (uses default if not provided)
+ * @returns Encrypted string
+ */
+export async function encryptData(data: string, key: string = DEFAULT_ENCRYPTION_KEY): Promise<string> {
+  return CryptoJS.AES.encrypt(data, key).toString()
+}
+
+/**
+ * Decrypt data using AES encryption
+ * @param encryptedData Encrypted data string
+ * @param key Optional encryption key (uses default if not provided)
+ * @returns Decrypted string
+ */
+export async function decryptData(encryptedData: string, key: string = DEFAULT_ENCRYPTION_KEY): Promise<string> {
+  const bytes = CryptoJS.AES.decrypt(encryptedData, key)
+  return bytes.toString(CryptoJS.enc.Utf8)
 }
 
 /**
  * Hash a string using SHA-256
- * @param text Text to hash
+ * @param data String to hash
+ * @returns Hashed string
  */
-export function hashString(text: string): string {
-  return CryptoJS.SHA256(text).toString()
+export async function hashString(data: string): Promise<string> {
+  return await Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA256,
+    data
+  )
 }
 
 /**
- * Generate a unique ID
+ * Securely compare two strings in constant time
+ * This helps prevent timing attacks when comparing sensitive values
+ * @param a First string
+ * @param b Second string
+ * @returns True if strings are equal
  */
-export function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2, 15)
+export function secureCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false
+  }
+  
+  let result = 0
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  }
+  
+  return result === 0
 }
 
 /**
- * Check if a password has been compromised
- * This is a mock function as the real implementation would require an API call
- * to a service like "Have I Been Pwned"
+ * Mask a sensitive string (like credit card) for display
+ * @param text String to mask
+ * @param visibleStartChars Number of characters to show at start
+ * @param visibleEndChars Number of characters to show at end
+ * @returns Masked string
  */
-export function checkPasswordCompromised(password: string): Promise<boolean> {
-  // In a real implementation, this would check against a database of known breached passwords
-  // For simulation, we'll return false (not compromised) for most passwords
-  return Promise.resolve(false)
+export function maskSensitiveText(
+  text: string,
+  visibleStartChars: number = 4,
+  visibleEndChars: number = 4
+): string {
+  if (!text) return ""
+  if (text.length <= visibleStartChars + visibleEndChars) {
+    return text
+  }
+  
+  const start = text.substring(0, visibleStartChars)
+  const end = text.substring(text.length - visibleEndChars)
+  const maskedLength = text.length - visibleStartChars - visibleEndChars
+  const mask = "•".repeat(maskedLength)
+  
+  return `${start}${mask}${end}`
+}
+
+/**
+ * Calculate a unique hash for a set of credential data
+ * Useful for detecting duplicate entries
+ * @param data Credential data to hash
+ * @returns Hash string
+ */
+export async function calculateCredentialHash(data: {
+  website: string
+  username: string
+  password?: string
+}): Promise<string> {
+  const stringToHash = `${data.website.toLowerCase()}:${data.username.toLowerCase()}`
+  return await hashString(stringToHash)
 }
