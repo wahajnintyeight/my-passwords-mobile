@@ -2,7 +2,7 @@
  * The home screen shows the list of saved passwords and credentials
  * with search, filter, and action buttons
  */
-import React, { useState } from "react"
+import React, { useState, FC } from "react"
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, SafeAreaView } from "react-native"
 import { NativeStackScreenProps } from "@react-navigation/native-stack"
 import { AppStackParamList } from "../navigators/app-navigator"

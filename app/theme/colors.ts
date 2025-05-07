@@ -1,65 +1,55 @@
 /**
- * Color definitions for the app
+ * Defines the color palette for the app
  */
+import { Platform } from "react-native"
+
+// Semantic names for colors to be used throughout the app
 export const colors = {
-  // Core colors
-  primary: "#4361EE", // Primary brand color
-  primaryLight: "#8094FF",
-  primaryDark: "#3248BE",
-  primaryTransparent: "rgba(67, 97, 238, 0.7)",
-  secondary: "#F72585", // Secondary color for accents
-  secondaryLight: "#FF64B2",
-  secondaryDark: "#C01A65",
-
-  // UI colors
-  background: "#FFFFFF", // Main app background
-  card: "#FFFFFF", // Card background
-  text: "#1E2022", // Primary text color
-  textDim: "#6E7277", // Secondary text color
-  border: "#DEE2E6", // Border color
-  separator: "#E9ECEF", // Separator/divider color
+  // Base colors
+  transparent: "rgba(0, 0, 0, 0)",
   white: "#FFFFFF",
-  lightGrey: "#CED4DA",
-  lighterGrey: "#F8F9FA",
+  black: "#000000",
   
-  // Status/feedback colors
-  success: "#40C057", // Success states
-  error: "#FA5252", // Error states
-  warning: "#FD7E14", // Warning states
-  notification: "#4361EE", // Notification color
+  // Primary brand colors
+  primary: "#2563EB", // Blue
+  primaryDark: "#1E40AF",
+  primaryLight: "#93C5FD",
   
-  // Misc
-  shadowColor: "#000000",
-}
-
-// Dark mode would be implemented here
-export const darkColors = {
-  // Core colors
-  primary: "#4361EE",
-  primaryLight: "#8094FF",
-  primaryDark: "#3248BE",
-  primaryTransparent: "rgba(67, 97, 238, 0.7)",
-  secondary: "#F72585",
-  secondaryLight: "#FF64B2",
-  secondaryDark: "#C01A65",
-
-  // UI colors
-  background: "#121212",
-  card: "#1E1E1E",
-  text: "#F8F9FA",
-  textDim: "#ADB5BD",
-  border: "#343A40",
-  separator: "#343A40",
-  white: "#FFFFFF",
-  lightGrey: "#495057",
-  lighterGrey: "#222222",
+  // Secondary brand colors
+  secondary: "#4F46E5", // Indigo
+  secondaryDark: "#4338CA",
+  secondaryLight: "#C7D2FE",
   
-  // Status/feedback colors
-  success: "#40C057",
-  error: "#FA5252",
-  warning: "#FD7E14",
-  notification: "#4361EE",
+  // Accent colors
+  accent: "#10B981", // Emerald
+  accentDark: "#059669",
+  accentLight: "#A7F3D0",
   
-  // Misc
-  shadowColor: "#000000",
+  // Status colors
+  success: "#10B981", // Green
+  warning: "#F59E0B", // Amber
+  error: "#EF4444", // Red
+  info: "#3B82F6", // Blue
+  
+  // Background colors
+  background: "#F9FAFB", // Light gray background
+  card: "#FFFFFF",
+  lighterGrey: "#F3F4F6",
+  lightGrey: "#E5E7EB",
+  
+  // Text colors
+  text: "#111827", // Almost black
+  textDim: "#6B7280", // Medium gray
+  textLight: "#9CA3AF", // Lighter gray
+  placeholder: "#D1D5DB",
+  
+  // Border and separator colors
+  separator: "#E5E7EB",
+  border: "#D1D5DB",
+  
+  // Shadow color
+  shadowColor: Platform.select({
+    ios: "rgba(0, 0, 0, 0.1)",
+    android: "rgba(0, 0, 0, 0.2)",
+  }),
 }
